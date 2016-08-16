@@ -254,19 +254,8 @@ int base_data[SPLASH_WIDTH];
 int base_data2[SPLASH_WIDTH];
 
 
-//float BezierBlend(float t)
-//{
-//    return sqt(t) * (3.0f - 2.0f * t);
-//}
-
-float InOutQuadBlend(float t)
-{
-    if(t <= 0.5)
-        { return 2.0 * sqrt(t); }
-    else {
-      t -= 0.5f;
-      return 2.0 * t * (1.0 - t) + 0.5;
-    }
+float Sigmoid(float x){
+    return 1 / (1 + exp(-1 * x));
 }
 
 void loop() {
@@ -292,15 +281,16 @@ void loop() {
     level[13] = fft1024.read(185, 257);
     level[14] = fft1024.read(258, 359);
     level[15] = fft1024.read(360, 511);
-    level[16] = fft1024.read(0, 15);
-    level[17] = fft1024.read(60, 511);
+    level[16] = fft1024.read(0, 10);        // base
+    level[17] = fft1024.read(67, 359);     // voice
+    Serial.println("before tr");
     Serial.println(level[16]);
-    Serial.println(level[16]);
-    level[16] = InOutQuadBlend(level[16]);
-    level[17] = InOutQuadBlend(level[17]);
+    Serial.println(level[17]);
+    level[16] = Sigmoid((level[16]-0.5)*9);
+    level[17] = Sigmoid((level[17]*0.8-0.5)*9);
     Serial.println("--");
     Serial.println(level[16]);
-    Serial.println(level[16]);
+    Serial.println(level[17]);
  
     // Populate the display.
     for (int i = 0; i < 18; ++i) {
@@ -348,11 +338,20 @@ void loop() {
 
   EVERY_N_MILLISECONDS(25) { 
     for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = (int)(base_data[i] * 0.9);
-      base_data2[i] = (int)(base_data2[i] * 0.9);
+      base_data[i] = (int)(base_data[i] * 0.85);
+      base_data2[i] = (int)(base_data2[i] * 0.85);
     }
     FastLED.show();
   }
+
+  EVERY_N_MILLISECONDS(500) {
+    for (int i = 1; i < SPLASH_WIDTH / 2; i++) {
+        base_data[i-1] = max(base_data[i-1], base_data[i]);
+      }
+    for (int i = SPLASH_WIDTH - 2; i >= SPLASH_WIDTH / 2; i--) {
+        base_data[i+1] = max(base_data[i+1], base_data[i]);
+      }
+    }
 
     
 //    // Light the LEDs.
