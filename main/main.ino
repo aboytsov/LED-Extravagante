@@ -285,7 +285,7 @@ void loop() {
     // Light the LEDs.
     // First strip.
     for (int j = 0; j < ledsPerPin; ++j) {
-      if (j < ledsPerPin * level[2) {
+      if (j < ledsPerPin * level[2]) {
         leds.setPixel(j, 0xFF0000);
       } else {
         leds.setPixel(j, 0x000000);
