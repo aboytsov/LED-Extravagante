@@ -1,14 +1,18 @@
+#define FASTLED_ALLOW_INTERRUPTS 0
+
 #include <Adafruit_ILI9341.h>
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <OctoWS2811.h>
 #include <SD.h>
 #include <SerialFlash.h>
 
 #include "Arduino.h"
 #include "AudioStream.h"
 #include "DMAChannel.h"
+
+
+#include "FastLED.h"
 
 class AudioInputAnalogFixed : public AudioStream
 {
@@ -219,37 +223,55 @@ AudioConnection          patchCord2(adc, rms);
 #define TFT_CS 10
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
-// LEDs
-const int ledsPerPin = 225;
-DMAMEM int displayMemory[ledsPerPin * 6];
-int drawingMemory[ledsPerPin * 6];
-const int config = WS2811_GRB | WS2811_800kHz;
-OctoWS2811 leds(ledsPerPin, displayMemory, drawingMemory, config);
+#define NUM_LEDS   225
+#define PIN 2
+#define LED_TYPE    WS2811
+#define COLOR_ORDER GRB
 
+struct CRGB leds[NUM_LEDS];                                   // Initialize our LED array.
 
 void setup() {
+  Serial.begin(9600);
   pinMode(A3, INPUT);
   
   // Audio requires memory to work.
   AudioMemory(12);
 
+  FastLED.addLeds<LED_TYPE, PIN, COLOR_ORDER>(leds, NUM_LEDS); 
+  show_at_max_brightness_for_power();
+
   // Configure the display.
   tft.begin();
   tft.fillScreen(ILI9341_BLACK);
-
-  // Turn on the LEDs
-  leds.begin();
-  leds.show();
 }
 
-float level[16];
-int old_freq_width[16];
-
+float level[18];                      // last 2 levels are base and treble
+int old_freq_width[18];
 int old_rms_height;
+
+#define SPLASH_WIDTH 10
+int base_data[SPLASH_WIDTH];
+int base_data2[SPLASH_WIDTH];
+
+
+//float BezierBlend(float t)
+//{
+//    return sqt(t) * (3.0f - 2.0f * t);
+//}
+
+float InOutQuadBlend(float t)
+{
+    if(t <= 0.5)
+        { return 2.0 * sqrt(t); }
+    else {
+      t -= 0.5f;
+      return 2.0 * t * (1.0 - t) + 0.5;
+    }
+}
 
 void loop() {
   // Display the levels.
-  if (fft1024.available() && !leds.busy()) {
+  if (fft1024.available()) {
     // read the 512 FFT frequencies into 16 levels
     // music is heard in octaves, but the FFT data
     // is linear, so for the higher octaves, read
@@ -270,37 +292,26 @@ void loop() {
     level[13] = fft1024.read(185, 257);
     level[14] = fft1024.read(258, 359);
     level[15] = fft1024.read(360, 511);
-
+    level[16] = fft1024.read(0, 15);
+    level[17] = fft1024.read(60, 511);
+    Serial.println(level[16]);
+    Serial.println(level[16]);
+    level[16] = InOutQuadBlend(level[16]);
+    level[17] = InOutQuadBlend(level[17]);
+    Serial.println("--");
+    Serial.println(level[16]);
+    Serial.println(level[16]);
+ 
     // Populate the display.
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0; i < 18; ++i) {
       int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * level[i]);
       if (new_freq_width < old_freq_width[i]) {
-        tft.fillRect(new_freq_width + 1, i * ILI9341_TFTHEIGHT / 16, old_freq_width[i] - new_freq_width, ILI9341_TFTHEIGHT / 16, ILI9341_BLACK);
+        tft.fillRect(new_freq_width + 1, i * ILI9341_TFTHEIGHT / 18, old_freq_width[i] - new_freq_width, ILI9341_TFTHEIGHT / 18, ILI9341_BLACK);
       } else {
-        tft.fillRect(old_freq_width[i], i * ILI9341_TFTHEIGHT / 16, new_freq_width - old_freq_width[i], ILI9341_TFTHEIGHT / 16, ILI9341_RED);
+        tft.fillRect(old_freq_width[i], i * ILI9341_TFTHEIGHT / 18, new_freq_width - old_freq_width[i], ILI9341_TFTHEIGHT / 18, ILI9341_RED);
       }
       old_freq_width[i] = new_freq_width;
     }
-
-    // Light the LEDs.
-    // First strip.
-    for (int j = 0; j < ledsPerPin; ++j) {
-      if (j < ledsPerPin * level[2]) {
-        leds.setPixel(j, 0xFF0000);
-      } else {
-        leds.setPixel(j, 0x000000);
-      }
-    }
-    // Second strip.
-    for (int j = ledsPerPin; j < 2 * ledsPerPin; ++j) {
-      if (j - ledsPerPin < ledsPerPin * level[14]) {
-        leds.setPixel(j, 0x00FF00);
-      } else {
-        leds.setPixel(j, 0x000000);
-      }
-    }
-    leds.show();
-  }
 
   // Disploy the total amplitude on the display.
   if (rms.available()) {
@@ -312,5 +323,75 @@ void loop() {
     }
     old_rms_height = new_rms_height;
   }
+
+  
+  if (level[16] > 0) {
+    for (int i = 0; i < SPLASH_WIDTH; i++) {
+      base_data[i] = max(level[16] * 256, base_data[i]);
+    }
+  }
+
+  if (level[17] > 0) {
+    for (int i = 0; i < SPLASH_WIDTH; i++) {
+      base_data2[i] = max(level[17] * 256, base_data[i]);
+    }
+  }
+  Serial.println("--");
+  Serial.println(base_data[0]);
+
+
+  for (int i = 0; i < SPLASH_WIDTH; i++) {
+    leds[10 + i] = CRGB(base_data[i], 0, 0);
+    leds[10 + SPLASH_WIDTH+ 10 + i] = CRGB(0, 0, base_data2[i]);
+    //leds[i] = CRGB(255, 0, 0);
+  }
+
+  EVERY_N_MILLISECONDS(25) { 
+    for (int i = 0; i < SPLASH_WIDTH; i++) {
+      base_data[i] = (int)(base_data[i] * 0.9);
+      base_data2[i] = (int)(base_data2[i] * 0.9);
+    }
+    FastLED.show();
+  }
+
+    
+//    // Light the LEDs.
+//    // First strip.
+//    for (int j = 0; j < ledsPerPin; ++j) {
+//      if (j < ledsPerPin * level[2]) {
+//        leds.setPixel(j, 0xFF0000);
+//      } else {
+//        leds.setPixel(j, 0x000000);
+//      }
+//    }
+//    // Second strip.
+//    for (int j = ledsPerPin; j < 2 * ledsPerPin; ++j) {
+//      if (j - ledsPerPin < ledsPerPin * level[14]) {
+//        leds.setPixel(j, 0x00FF00);
+//      } else {
+//        leds.setPixel(j, 0x000000);
+//      }
+//    }
+
+    
+
+
+  }
+  
 }
 
+
+// https://github.com/atuline/FastLED-Demos/blob/master/aatemplate/aatemplate.ino
+//   dots fading out slowly
+// https://github.com/atuline/FastLED-Demos/blob/master/easing/easing.ino
+//   good ease out example
+// https://github.com/atuline/FastLED-Demos/blob/master/fill_grad/fill_grad.ino
+//   nice gradient example
+// https://github.com/atuline/FastLED-Demos/blob/master/juggle/juggle.ino
+//   nice moving lines (too quick)
+// ! https://github.com/atuline/FastLED-Demos/blob/master/lightnings/lightnings.ino
+//   even better moving lines
+// ! https://github.com/atuline/FastLED-Demos/blob/master/rainbow_march/rainbow_march.ino
+//   matching rainbow
+// https://github.com/atuline/FastLED-Demos/blob/master/two_sin_pal_demo/two_sin_pal_demo.ino
+//   sinus waves - not bad but requires some work
