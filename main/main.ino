@@ -230,7 +230,32 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 struct CRGB leds[NUM_LEDS];                                   // Initialize our LED array.
 
+
+#define SPLASH_WIDTH 40
+#define SPLASH_CENTER (SPLASH_WIDTH / 2)
+float colors[SPLASH_WIDTH];
+
+#define FREQ 40
+int samples[FREQ];
+#define SPEED 1.0            // can't be more than one increase the frequency instead
+float travelled[FREQ];
+int current = 0;
+
+#define FADE 0.8
+float multipliers[SPLASH_CENTER];
+
+
 void setup() {
+  float x = 1.0;
+  for (int i = 0; i < SPLASH_CENTER; i++) {
+    multipliers[i] = x;
+    x *= FADE;
+  }
+
+  for (int i = 0; i < SPLASH_WIDTH; i++) {
+    colors[i] = 0.0;
+  }
+  
   Serial.begin(9600);
   pinMode(A3, INPUT);
   
@@ -249,13 +274,12 @@ float level[18];                      // last 2 levels are base and treble
 int old_freq_width[18];
 int old_rms_height;
 
-#define SPLASH_WIDTH 10
-int base_data[SPLASH_WIDTH];
-int base_data2[SPLASH_WIDTH];
-
-
 float Sigmoid(float x){
     return 1 / (1 + exp(-1 * x));
+}
+
+int toColor(float value) {
+  return min((int)(value * 255), 255);
 }
 
 void loop() {
@@ -283,14 +307,14 @@ void loop() {
     level[15] = fft1024.read(360, 511);
     level[16] = fft1024.read(0, 10);        // base
     level[17] = fft1024.read(67, 359);     // voice
-    Serial.println("before tr");
-    Serial.println(level[16]);
-    Serial.println(level[17]);
+    //Serial.println("before tr");
+    //Serial.println(level[16]);
+    //Serial.println(level[17]);
     level[16] = Sigmoid((level[16]-0.5)*9);
     level[17] = Sigmoid((level[17]*0.8-0.5)*9);
-    Serial.println("--");
-    Serial.println(level[16]);
-    Serial.println(level[17]);
+    //Serial.println("--");
+    //Serial.println(level[16]);
+    //Serial.println(level[17]);
  
     // Populate the display.
     for (int i = 0; i < 18; ++i) {
@@ -314,44 +338,81 @@ void loop() {
     old_rms_height = new_rms_height;
   }
 
-  
-  if (level[16] > 0) {
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = max(level[16] * 256, base_data[i]);
+
+//  EVERY_N_MILLISECONDS(25) {
+    //Serial.println("freq");
+    //Serial.println(current);
+    
+    EVERY_N_MILLISECONDS(20) {
+//      Serial.println("current:");
+//      Serial.println(current);
+//      Serial.println("samples:");
+      for (int j = 0; j < FREQ; j++) {
+//        Serial.println(samples[j]);
+//        Serial.println(travelled[j]);
+        if (samples[j] != 0) {
+          //Serial.println("FOUND ONE");
+          float new_travelled = travelled[j] + SPEED;
+          if (new_travelled > SPLASH_WIDTH) {
+            samples[j] = 0;
+            travelled[j] = 0.0;
+          } else {
+            int int_travelled = travelled[j];
+            int int_new_travelled = (int)new_travelled;
+            int step = int_new_travelled - int_travelled;
+            // TODO: convert colors to int
+            if (step > 0) {
+              int from = max(0, SPLASH_CENTER - int_new_travelled);
+              int to = min(SPLASH_CENTER + int_new_travelled, SPLASH_WIDTH - 1);
+  //            Serial.println("from/to");
+  //            Serial.println(from);
+  //            Serial.println(to);
+              for (int x = from; x <= to; x++) {
+                int mult_index = int_new_travelled - abs(x - SPLASH_CENTER);
+                int prev_mult_index = mult_index - step;
+//                Serial.println("-");
+//                Serial.println(mult_index);
+//                Serial.println(prev_mult_index);
+//                Serial.println(samples[j]);
+//                Serial.println((multipliers[mult_index] - (prev_mult_index >= 0 ? multipliers[prev_mult_index] : 0)));
+                colors[x] = colors[x] + samples[j] * (multipliers[mult_index] - (prev_mult_index >= 0 ? multipliers[prev_mult_index] : 0));
+              }
+            }
+            travelled[j] = new_travelled;
+          }
+        }
+      }
     }
-  }
 
-  if (level[17] > 0) {
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data2[i] = max(level[17] * 256, base_data[i]);
+    EVERY_N_MILLISECONDS(20) {
+//      samples[current] = toColor(level[16]);
+      samples[current] = toColor(level[16]);
+      travelled[current] = 0.0;
+      colors[SPLASH_CENTER] += samples[current];
+      current++;
+      if (current >= FREQ) { current = 0; }
+
+//    Serial.println("---");
+//      Serial.println(current);
+//      for (int i=0;i < FREQ; i++) {
+//        Serial.println(travelled[i]);
+//      }
+//      Serial.println("colors");
+//      for (int i = 0; i < SPLASH_WIDTH; i++) {
+//        Serial.println(colors[i]);
+//      }
+
     }
-  }
-  Serial.println("--");
-  Serial.println(base_data[0]);
 
 
-  for (int i = 0; i < SPLASH_WIDTH; i++) {
-    leds[10 + i] = CRGB(base_data[i], 0, 0);
-    leds[10 + SPLASH_WIDTH+ 10 + i] = CRGB(0, 0, base_data2[i]);
-    //leds[i] = CRGB(255, 0, 0);
-  }
-
-  EVERY_N_MILLISECONDS(25) { 
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = (int)(base_data[i] * 0.85);
-      base_data2[i] = (int)(base_data2[i] * 0.85);
-    }
+    EVERY_N_MILLISECONDS(20) {
+      for (int i = 0; i < SPLASH_WIDTH; i++) {
+        leds[10 + i] = CRGB(min((int)colors[i], 256), 0, 0);
+      }
     FastLED.show();
-  }
-
-  EVERY_N_MILLISECONDS(500) {
-    for (int i = 1; i < SPLASH_WIDTH / 2; i++) {
-        base_data[i-1] = max(base_data[i-1], base_data[i]);
-      }
-    for (int i = SPLASH_WIDTH - 2; i >= SPLASH_WIDTH / 2; i--) {
-        base_data[i+1] = max(base_data[i+1], base_data[i]);
-      }
     }
+    
+//  }
 
     
 //    // Light the LEDs.
