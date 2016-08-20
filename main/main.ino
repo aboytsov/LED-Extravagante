@@ -220,32 +220,7 @@ void loop() {
       }
     }
 
-    
-
-    
-//    // Light the LEDs.
-//    // First strip.
-//    for (int j = 0; j < ledsPerPin; ++j) {
-//      if (j < ledsPerPin * level[2]) {
-//        leds.setPixel(j, 0xFF0000);
-//      } else {
-//        leds.setPixel(j, 0x000000);
-//      }
-//    }
-//    // Second strip.
-//    for (int j = ledsPerPin; j < 2 * ledsPerPin; ++j) {
-//      if (j - ledsPerPin < ledsPerPin * level[14]) {
-//        leds.setPixel(j, 0x00FF00);
-//      } else {
-//        leds.setPixel(j, 0x000000);
-//      }
-//    }
-
-    
-
-
   }
-  
 }
 
 
