@@ -142,7 +142,7 @@ void loop() {
   float base_ratio = 0.4;
   EVERY_N_MILLISECONDS(thisdelay) {                           // FastLED based non-blocking routine to update/display the sequence.
     thishue++;                                                 
-    //fill_rainbow1(leds, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
+    fill_rainbow1(leds + NUM_LEDS, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
   }
 
 //  Serial.println(base_data[0]);
