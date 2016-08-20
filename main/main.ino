@@ -304,14 +304,14 @@ void loop() {
     level[15] = fft1024.read(360, 511);
     level[16] = fft1024.read(0, 10);        // base
     level[17] = fft1024.read(67, 359);     // voice
-    Serial.println("before tr");
-    Serial.println(level[16]);
-    Serial.println(level[17]);
+//    Serial.println("before tr");
+//    Serial.println(level[16]);
+//    Serial.println(level[17]);
     level[16] = Sigmoid((level[16]-0.5)*9);
     level[17] = Sigmoid((level[17]*0.8-0.5)*9);
-    Serial.println("--");
-    Serial.println(level[16]);
-    Serial.println(level[17]);
+//    Serial.println("--");
+//    Serial.println(level[16]);
+//    Serial.println(level[17]);
  
     // Populate the display.
     for (int i = 0; i < 18; ++i) {
@@ -338,7 +338,7 @@ void loop() {
   float base_ratio = 0.4;
   EVERY_N_MILLISECONDS(thisdelay) {                           // FastLED based non-blocking routine to update/display the sequence.
     thishue++;                                                 
-    fill_rainbow1(leds, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
+    //fill_rainbow1(leds, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
   }
 
 //  Serial.println(base_data[0]);
@@ -349,11 +349,45 @@ void loop() {
     }
   }
 
-//  if (level[17] > 0) {
-//    for (int i = 0; i < SPLASH_WIDTH; i++) {
-//      base_data2[i] = max(level[17] * 256, base_data[i]);
-//    }
-//  }
+  if (level[17] > 0) {
+    for (int i = 0; i < SPLASH_WIDTH; i++) {
+      base_data2[i] = max(level[17] * 256, base_data2[i]);
+    }
+  }
+
+  static int num_dots = 8;
+  static int gap = NUM_LEDS / num_dots;   
+  static uint8_t hue = 0;
+  static uint8_t offset = 0;
+
+  for( int i = 0; i < NUM_LEDS; i++) {
+    CHSV hsv;
+    hsv.hue = hue;
+    hsv.val = 255;
+    hsv.sat = 130;
+    int x = (i + offset) % gap;
+    if (x == 0) {
+      leds[i] = hsv;
+    } else {
+      int level = (int)(((float)(max(base_data2[0], 30)) / 256.0) * gap);
+      if (level < x) {
+        leds[i] = 0;
+      } else {
+        static uint8_t fadeout_step = 190 / gap;
+        hsv.val = 255 - fadeout_step * (gap - level + x);
+        leds[i] = hsv;
+      }
+    }
+  }
+
+  EVERY_N_MILLISECONDS(300) {
+    hue++;
+  }
+
+  EVERY_N_MILLISECONDS(200) {
+    offset++;         // correct for LEDs number
+  }
+  
 //  Serial.println("--");
 //  Serial.println(base_data[0]);
 
@@ -367,7 +401,7 @@ void loop() {
   EVERY_N_MILLISECONDS(25) { 
     for (int i = 0; i < SPLASH_WIDTH; i++) {
       base_data[i] = (int)(base_data[i] * 0.85);
-      base_data2[i] = (int)(base_data2[i] * 0.85);
+      base_data2[i] = (int)(base_data2[i] * 0.95);
     }
     FastLED.show();
   }
@@ -380,6 +414,8 @@ void loop() {
         base_data[i+1] = max(base_data[i+1], base_data[i]);
       }
     }
+
+    
 
     
 //    // Light the LEDs.
@@ -415,10 +451,8 @@ void loop() {
 // https://github.com/atuline/FastLED-Demos/blob/master/fill_grad/fill_grad.ino
 //   nice gradient example
 // https://github.com/atuline/FastLED-Demos/blob/master/juggle/juggle.ino
-//   nice moving lines (too quick)
+//   nice moving lines (too quick - make it better and it should work)
 // ! https://github.com/atuline/FastLED-Demos/blob/master/lightnings/lightnings.ino
-//   even better moving lines
-// ! https://github.com/atuline/FastLED-Demos/blob/master/rainbow_march/rainbow_march.ino
-//   matching rainbow
+//   even better moving lines (doesn't work)
 // https://github.com/atuline/FastLED-Demos/blob/master/two_sin_pal_demo/two_sin_pal_demo.ino
 //   sinus waves - not bad but requires some work
