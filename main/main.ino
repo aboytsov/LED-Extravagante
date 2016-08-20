@@ -253,10 +253,31 @@ int old_rms_height;
 int base_data[SPLASH_WIDTH];
 int base_data2[SPLASH_WIDTH];
 
+// Initialize global variables for sequences
+uint8_t thisdelay = 8;                                        // A delay value for the sequence(s)
+uint8_t thishue = 0;                                          // Starting hue value.
+uint8_t deltahue = 4;                                        // Hue change between pixels.
 
 float Sigmoid(float x){
     return 1 / (1 + exp(-1 * x));
 }
+
+void fill_rainbow1( struct CRGB * pFirstLED, int numToFill,
+                  uint8_t initialhue,
+                  uint8_t deltahue,
+                  uint8_t value,
+                  uint8_t saturation)
+{
+    CHSV hsv;
+    hsv.hue = initialhue;
+    hsv.val = value;
+    hsv.sat = saturation;
+    for( int i = 0; i < numToFill; i++) {
+        pFirstLED[i] = hsv;
+        hsv.hue += deltahue;
+    }
+}
+
 
 void loop() {
   // Display the levels.
@@ -314,6 +335,13 @@ void loop() {
     old_rms_height = new_rms_height;
   }
 
+  float base_ratio = 0.4;
+  EVERY_N_MILLISECONDS(thisdelay) {                           // FastLED based non-blocking routine to update/display the sequence.
+    thishue++;                                                 
+    fill_rainbow1(leds, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
+  }
+
+//  Serial.println(base_data[0]);
   
   if (level[16] > 0) {
     for (int i = 0; i < SPLASH_WIDTH; i++) {
@@ -321,20 +349,20 @@ void loop() {
     }
   }
 
-  if (level[17] > 0) {
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data2[i] = max(level[17] * 256, base_data[i]);
-    }
-  }
-  Serial.println("--");
-  Serial.println(base_data[0]);
+//  if (level[17] > 0) {
+//    for (int i = 0; i < SPLASH_WIDTH; i++) {
+//      base_data2[i] = max(level[17] * 256, base_data[i]);
+//    }
+//  }
+//  Serial.println("--");
+//  Serial.println(base_data[0]);
 
 
-  for (int i = 0; i < SPLASH_WIDTH; i++) {
-    leds[10 + i] = CRGB(base_data[i], 0, 0);
-    leds[10 + SPLASH_WIDTH+ 10 + i] = CRGB(0, 0, base_data2[i]);
-    //leds[i] = CRGB(255, 0, 0);
-  }
+//  for (int i = 0; i < SPLASH_WIDTH; i++) {
+//    leds[10 + i] = CRGB(base_data[i], 0, 0);
+//    leds[10 + SPLASH_WIDTH+ 10 + i] = CRGB(0, 0, base_data2[i]);
+//    //leds[i] = CRGB(255, 0, 0);
+//  }
 
   EVERY_N_MILLISECONDS(25) { 
     for (int i = 0; i < SPLASH_WIDTH; i++) {
