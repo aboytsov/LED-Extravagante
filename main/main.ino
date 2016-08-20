@@ -1,6 +1,6 @@
 #define FASTLED_ALLOW_INTERRUPTS 0
 
-#include <Adafruit_ILI9341.h>
+#include <ILI9341_t3.h>
 #include <Audio.h>
 #include <FastLED.h>
 #include <SD.h>
@@ -20,7 +20,10 @@ AudioConnection          patchCord2(adc, rms);
 // Display.
 #define TFT_DC 9
 #define TFT_CS 10
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC);
+bool display_is_updating = false;
+int old_freq_width[18];
+int old_rms_height;
 
 #define NUM_LEDS   225
 #define PIN 2
@@ -45,8 +48,7 @@ void setup() {
 }
 
 float level[18];                      // last 2 levels are base and treble
-int old_freq_width[18];
-int old_rms_height;
+
 
 #define SPLASH_WIDTH 10
 int base_data[SPLASH_WIDTH];
@@ -79,6 +81,13 @@ void fill_rainbow1( struct CRGB * pFirstLED, int numToFill,
 
 
 void loop() {
+  // Enable the display with a serial input (i.e. any character sent as a serial input).
+  EVERY_N_MILLISECONDS(100) {
+    if (Serial.read() != -1) {
+      display_is_updating = !display_is_updating;
+    }
+  }
+  
   // Display the levels.
   if (fft1024.available()) {
     // read the 512 FFT frequencies into 16 levels
@@ -111,28 +120,30 @@ void loop() {
 //    Serial.println("--");
 //    Serial.println(level[16]);
 //    Serial.println(level[17]);
- 
-    // Populate the display.
-    for (int i = 0; i < 18; ++i) {
-      int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * level[i]);
-      if (new_freq_width < old_freq_width[i]) {
-        tft.fillRect(new_freq_width + 1, i * ILI9341_TFTHEIGHT / 18, old_freq_width[i] - new_freq_width, ILI9341_TFTHEIGHT / 18, ILI9341_BLACK);
-      } else {
-        tft.fillRect(old_freq_width[i], i * ILI9341_TFTHEIGHT / 18, new_freq_width - old_freq_width[i], ILI9341_TFTHEIGHT / 18, ILI9341_RED);
-      }
-      old_freq_width[i] = new_freq_width;
-    }
 
-  // Disploy the total amplitude on the display.
-  if (rms.available()) {
-    int new_rms_height = (int) (rms.read() * ILI9341_TFTHEIGHT);
-    if (new_rms_height < old_rms_height) {
-      tft.fillRect(ILI9341_TFTWIDTH - 10, new_rms_height + 1, 10, old_rms_height - new_rms_height, ILI9341_BLACK);
-    } else {
-      tft.fillRect(ILI9341_TFTWIDTH - 10, old_rms_height, 10, new_rms_height - old_rms_height, ILI9341_RED);
+    // Populate the display.
+    if (display_is_updating) {
+      for (int i = 0; i < 18; ++i) {
+        int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * level[i]);
+        if (new_freq_width < old_freq_width[i]) {
+          tft.fillRect(new_freq_width + 1, i * ILI9341_TFTHEIGHT / 18, old_freq_width[i] - new_freq_width, ILI9341_TFTHEIGHT / 18, ILI9341_BLACK);
+        } else {
+          tft.fillRect(old_freq_width[i], i * ILI9341_TFTHEIGHT / 18, new_freq_width - old_freq_width[i], ILI9341_TFTHEIGHT / 18, ILI9341_RED);
+        }
+        old_freq_width[i] = new_freq_width;
+      }
+
+      // Disploy the total amplitude on the display.
+      if (rms.available()) {
+        int new_rms_height = (int) (rms.read() * ILI9341_TFTHEIGHT);
+        if (new_rms_height < old_rms_height) {
+          tft.fillRect(ILI9341_TFTWIDTH - 10, new_rms_height + 1, 10, old_rms_height - new_rms_height, ILI9341_BLACK);
+        } else {
+          tft.fillRect(ILI9341_TFTWIDTH - 10, old_rms_height, 10, new_rms_height - old_rms_height, ILI9341_RED);
+        }
+        old_rms_height = new_rms_height;
+      }
     }
-    old_rms_height = new_rms_height;
-  }
 
   float base_ratio = 0.4;
   EVERY_N_MILLISECONDS(thisdelay) {                           // FastLED based non-blocking routine to update/display the sequence.
