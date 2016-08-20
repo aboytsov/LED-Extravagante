@@ -1,8 +1,9 @@
-#define FASTLED_ALLOW_INTERRUPTS 0
+#define USE_OCTOWS2811
+#include <OctoWS2811.h>
 
-#include <ILI9341_t3.h>
 #include <Audio.h>
 #include <FastLED.h>
+#include <ILI9341_t3.h>
 #include <SD.h>
 #include <SPI.h>
 #include <SerialFlash.h>
@@ -26,11 +27,12 @@ int old_freq_width[18];
 int old_rms_height;
 
 #define NUM_LEDS   225
+#define NUM_STRIPS 8
 #define PIN 2
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
 
-struct CRGB leds[NUM_LEDS];                                   // Initialize our LED array.
+struct CRGB leds[NUM_LEDS * NUM_STRIPS];                                   // Initialize our LED array.
 
 void setup() {
   Serial.begin(9600);
@@ -39,7 +41,8 @@ void setup() {
   // Audio requires memory to work.
   AudioMemory(12);
 
-  FastLED.addLeds<LED_TYPE, PIN, COLOR_ORDER>(leds, NUM_LEDS); 
+  FastLED.addLeds<OCTOWS2811>(leds, NUM_LEDS);
+
   show_at_max_brightness_for_power();
 
   // Configure the display.
@@ -190,6 +193,8 @@ void loop() {
     }
   }
 
+  FastLED.show();
+
   EVERY_N_MILLISECONDS(300) {
     hue++;
   }
@@ -213,7 +218,6 @@ void loop() {
       base_data[i] = (int)(base_data[i] * 0.85);
       base_data2[i] = (int)(base_data2[i] * 0.95);
     }
-    FastLED.show();
   }
 
   EVERY_N_MILLISECONDS(500) {
