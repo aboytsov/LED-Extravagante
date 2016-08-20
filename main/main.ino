@@ -19,19 +19,13 @@ AudioConnection          patchCord1(adc, fft1024);
 AudioConnection          patchCord2(adc, rms);
 
 // Display.
-#define TFT_DC 9
-#define TFT_CS 10
-ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC);
+ILI9341_t3 tft = ILI9341_t3(10, 9);
 bool display_is_updating = false;
 int old_freq_width[18];
 int old_rms_height;
 
 #define NUM_LEDS   225
 #define NUM_STRIPS 8
-#define PIN 2
-#define LED_TYPE    WS2811
-#define COLOR_ORDER GRB
-
 struct CRGB leds[NUM_LEDS * NUM_STRIPS];                                   // Initialize our LED array.
 
 void setup() {
@@ -42,16 +36,12 @@ void setup() {
   AudioMemory(12);
 
   FastLED.addLeds<OCTOWS2811>(leds, NUM_LEDS);
-
-  show_at_max_brightness_for_power();
+  FastLED.show();
 
   // Configure the display.
   tft.begin();
   tft.fillScreen(ILI9341_BLACK);
 }
-
-float level[18];                      // last 2 levels are base and treble
-
 
 #define SPLASH_WIDTH 10
 int base_data[SPLASH_WIDTH];
@@ -93,6 +83,7 @@ void loop() {
   
   // Display the levels.
   if (fft1024.available()) {
+    float level[18];                      // last 2 levels are base and treble
     // read the 512 FFT frequencies into 16 levels
     // music is heard in octaves, but the FFT data
     // is linear, so for the higher octaves, read
