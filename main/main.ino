@@ -59,10 +59,10 @@ void setup() {
 #define BASE_SIGMOID_TILT     13
 #define TREBLE_SIGMOID_CENTER 0.7
 #define TREBLE_SIGMOID_TILT   3
-#define BASE_LEVEL_DECAY      0.85
+#define BASE_LEVEL_DECAY      0.88
 #define TREBLE_LEVEL_DECAY    0.95
 
-#define RAINBOW_SPEED 8                 // rainbow step in ms
+#define RAINBOW_SPEED 20                 // rainbow step in ms
 #define RAINBOW_DELTA_HUE 4             // hue change between pixels
 #define RAINBOW_BASE_LEVEL 0.4          // rainbow base level brightness (no sound)
 uint8_t rainbow_hue = 0;                // current rainbow hue
@@ -176,14 +176,15 @@ void loop() {
   // Rainbow (bass)
   
   EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
-    fill_rainbow(bass_strips,
-                 NUM_BASS_STRIPS, 
-                 NUM_LEDS, 
-                 ++rainbow_hue, 
-                 RAINBOW_DELTA_HUE, 
-                 toColor(RAINBOW_BASE_LEVEL + (1.0 - RAINBOW_BASE_LEVEL) * base_level_smoothed), 
-                 240);
+    ++rainbow_hue;
   }
+  fill_rainbow(bass_strips,
+               NUM_BASS_STRIPS, 
+               NUM_LEDS, 
+               rainbow_hue, 
+               RAINBOW_DELTA_HUE, 
+               toColor(RAINBOW_BASE_LEVEL + (1.0 - RAINBOW_BASE_LEVEL) * base_level_smoothed), 
+               240);
 
   // Dots (treble)
 
