@@ -65,6 +65,7 @@ uint8_t rainbow_hue = 0;                // current rainbow hue
 #define GAP_WIDTH (NUM_LEDS / NUM_DOTS)
 #define DOTS_SATURATION 130
 #define DOTS_MIN_BRIGHTNESS 0.15
+#define DOTS_FADEOUT 190
 uint8_t dots_hue = 0;                   // current hue for treble dots
 #define DOTS_HUE_CHANGE_SPEED 300       
 int dots_offset = 0;                    // current offset for treble dots
@@ -174,22 +175,12 @@ void loop() {
   // Dots (treble)
 
   for (int i = 0; i < NUM_LEDS; i++) {
-    CHSV hsv;
-    hsv.hue = dots_hue;
-    hsv.val = 255;
-    hsv.sat = DOTS_SATURATION;
     int x = (i + dots_offset) % GAP_WIDTH;
-    if (x == 0) {
-      leds[i] = hsv;
+    int level = (int)(max(treble_level_smoothed, DOTS_MIN_BRIGHTNESS) * GAP_WIDTH);
+    if (level < x) {
+      leds[i] = 0;
     } else {
-      int level = (int)(max(treble_level_smoothed, DOTS_MIN_BRIGHTNESS) * GAP_WIDTH);
-      if (level < x) {
-        leds[i] = 0;
-      } else {
-        static uint8_t fadeout_step = 190 / GAP_WIDTH;
-        hsv.val = 255 - fadeout_step * (GAP_WIDTH - level + x);
-        leds[i] = hsv;
-      }
+      leds[i] = CHSV(dots_hue, DOTS_SATURATION, 255 - (x == 0 ? 0 : (DOTS_FADEOUT / GAP_WIDTH) * (GAP_WIDTH - level + x)));
     }
   }
 
