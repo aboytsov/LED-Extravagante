@@ -62,10 +62,10 @@ void setup() {
 #define BASE_LEVEL_DECAY      0.88
 #define TREBLE_LEVEL_DECAY    0.95
 
-#define RAINBOW_SPEED 20                 // rainbow step in ms
-#define RAINBOW_DELTA_HUE 4             // hue change between pixels
-#define RAINBOW_BASE_LEVEL 0.4          // rainbow base level brightness (no sound)
-uint8_t rainbow_hue = 0;                // current rainbow hue
+#define RAINBOW_SPEED 20                                     // rainbow step in ms
+#define RAINBOW_DELTA_HUE (256.0 * 3 / NUM_LEDS)             // hue change between pixels
+#define RAINBOW_BASE_LEVEL 0.4                               // rainbow base level brightness (no sound)
+uint8_t rainbow_hue = 0;                                     // current rainbow hue
 
 #define NUM_DOTS 8
 #define GAP_WIDTH (NUM_LEDS / NUM_DOTS)
@@ -91,19 +91,19 @@ uint8_t toColor(float x) {
 void fill_rainbow(struct CRGB * strips[], int num_strips,
                   int numToFill,
                   uint8_t initialhue,
-                  uint8_t deltahue,
+                  float deltahue,
                   uint8_t value,
                   uint8_t saturation) {
+    float hue = initialhue;
     CHSV hsv;
-    hsv.hue = initialhue;
     hsv.val = value;
     hsv.sat = saturation;
     for (int i = 0; i < numToFill; i++) {
+        hsv.hue = (int) (hue + 0.5);
         for (int j = 0; j < num_strips; j++) {
           strips[j][i] = hsv;
         }
-        
-        hsv.hue += deltahue;
+        hue += deltahue;
     }
 }
 
