@@ -12,11 +12,15 @@
 #include "adc_fixed.h"
 
 // Audio input.
-AudioInputAnalogFixed         adc(A3);
+AudioInputAnalogFixed    adc(A3);
 AudioAnalyzeFFT1024      fft1024;
 AudioAnalyzeRMS          rms;
 AudioConnection          patchCord1(adc, fft1024);
 AudioConnection          patchCord2(adc, rms);
+
+float sound_level[18];                   // last 2 levels are base and treble
+float &base_level = sound_level[16];
+float &treble_level = sound_level[17];
 
 // Display.
 ILI9341_t3 tft = ILI9341_t3(10, 9);
@@ -43,35 +47,36 @@ void setup() {
   tft.fillScreen(ILI9341_BLACK);
 }
 
-#define SPLASH_WIDTH 10
 int base_data[SPLASH_WIDTH];
 int base_data2[SPLASH_WIDTH];
 
-// Initialize global variables for sequences
-uint8_t thisdelay = 8;                                        // A delay value for the sequence(s)
-uint8_t thishue = 0;                                          // Starting hue value.
-uint8_t deltahue = 4;                                        // Hue change between pixels.
+#define BASE_SIGMOID_CENTER   0.35
+#define BASE_SIGMOID_TILT     13
+#define TREBLE_SIGMOID_CENTER 0.45
+#define TREBLE_SIGMOID_TILT   13
+
+#define RAINBOW_SPEED 8                 // rainbow step in ms
+#define RAINBOW_DELTA_HUE 4             // hue change between pixels
+uint8_t rainbow_hue = 0;                // current rainbow hue
 
 float Sigmoid(float x){
     return 1 / (1 + exp(-1 * x));
 }
 
-void fill_rainbow1( struct CRGB * pFirstLED, int numToFill,
+void fill_rainbow(struct CRGB * pFirstLED, int numToFill,
                   uint8_t initialhue,
                   uint8_t deltahue,
                   uint8_t value,
-                  uint8_t saturation)
-{
+                  uint8_t saturation) {
     CHSV hsv;
     hsv.hue = initialhue;
     hsv.val = value;
     hsv.sat = saturation;
-    for( int i = 0; i < numToFill; i++) {
+    for (int i = 0; i < numToFill; i++) {
         pFirstLED[i] = hsv;
         hsv.hue += deltahue;
     }
 }
-
 
 void loop() {
   // Enable the display with a serial input (i.e. any character sent as a serial input).
@@ -81,44 +86,37 @@ void loop() {
     }
   }
   
-  // Display the levels.
+  // Display the sound levels
   if (fft1024.available()) {
-    float level[18];                      // last 2 levels are base and treble
     // read the 512 FFT frequencies into 16 levels
     // music is heard in octaves, but the FFT data
     // is linear, so for the higher octaves, read
     // many FFT bins together.
-    level[0] =  fft1024.read(0);
-    level[1] =  fft1024.read(1);
-    level[2] =  fft1024.read(2, 3);
-    level[3] =  fft1024.read(4, 6);
-    level[4] =  fft1024.read(7, 10);
-    level[5] =  fft1024.read(11, 15);
-    level[6] =  fft1024.read(16, 22);
-    level[7] =  fft1024.read(23, 32);
-    level[8] =  fft1024.read(33, 46);
-    level[9] =  fft1024.read(47, 66);
-    level[10] = fft1024.read(67, 93);
-    level[11] = fft1024.read(94, 131);
-    level[12] = fft1024.read(132, 184);
-    level[13] = fft1024.read(185, 257);
-    level[14] = fft1024.read(258, 359);
-    level[15] = fft1024.read(360, 511);
-    level[16] = fft1024.read(1, 2);      // bass
-    level[17] = fft1024.read(7, 22);     // voice, snare, instrumentals.
-//    Serial.println("before tr");
-//    Serial.println(level[16]);
-//    Serial.println(level[17]);
-    level[16] = Sigmoid((level[16]-0.35)*13);
-    level[17] = Sigmoid((level[17]-0.45)*13);
-//    Serial.println("--");
-//    Serial.println(level[16]);
-//    Serial.println(level[17]);
+    sound_level[0]  = fft1024.read(0);
+    sound_level[1]  = fft1024.read(1);
+    sound_level[2]  = fft1024.read(2, 3);
+    sound_level[3]  = fft1024.read(4, 6);
+    sound_level[4]  = fft1024.read(7, 10);
+    sound_level[5]  = fft1024.read(11, 15);
+    sound_level[6]  = fft1024.read(16, 22);
+    sound_level[7]  = fft1024.read(23, 32);
+    sound_level[8]  = fft1024.read(33, 46);
+    sound_level[9]  = fft1024.read(47, 66);
+    sound_level[10] = fft1024.read(67, 93);
+    sound_level[11] = fft1024.read(94, 131);
+    sound_level[12] = fft1024.read(132, 184);
+    sound_level[13] = fft1024.read(185, 257);
+    sound_level[14] = fft1024.read(258, 359);
+    sound_level[15] = fft1024.read(360, 511);
+    // base
+    base_level = Sigmoid((fft1024.read(1, 2)-BASE_SIGMOID_CENTER)*BASE_SIGMOID_TILT);    
+    // voice, snare, instrumentals
+    treble_level = Sigmoid((fft1024.read(7, 22)-TREBLE_SIGMOID_CENTER)*TREBLE_SIGMOID_TILT);
 
     // Populate the display.
     if (display_is_updating) {
       for (int i = 0; i < 18; ++i) {
-        int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * level[i]);
+        int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * sound_level[i]);
         if (new_freq_width < old_freq_width[i]) {
           tft.fillRect(new_freq_width + 1, i * ILI9341_TFTHEIGHT / 18, old_freq_width[i] - new_freq_width, ILI9341_TFTHEIGHT / 18, ILI9341_BLACK);
         } else {
@@ -140,22 +138,20 @@ void loop() {
     }
 
   float base_ratio = 0.4;
-  EVERY_N_MILLISECONDS(thisdelay) {                           // FastLED based non-blocking routine to update/display the sequence.
-    thishue++;                                                 
-    fill_rainbow1(leds + NUM_LEDS, NUM_LEDS, thishue, deltahue, (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
+  EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
+    fill_rainbow(leds + NUM_LEDS, NUM_LEDS, ++rainbow_hue, RAINBOW_DELTA_HUE, 
+                 (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
   }
 
-//  Serial.println(base_data[0]);
-  
-  if (level[16] > 0) {
+  if (sound_level[16] > 0) {
     for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = max(level[16] * 256, base_data[i]);
+      base_data[i] = max(sound_level[16] * 256, base_data[i]);
     }
   }
 
-  if (level[17] > 0) {
+  if (sound_level[17] > 0) {
     for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data2[i] = max(level[17] * 256, base_data2[i]);
+      base_data2[i] = max(sound_level[17] * 256, base_data2[i]);
     }
   }
 
@@ -194,16 +190,6 @@ void loop() {
     offset++;         // correct for LEDs number
   }
   
-//  Serial.println("--");
-//  Serial.println(base_data[0]);
-
-
-//  for (int i = 0; i < SPLASH_WIDTH; i++) {
-//    leds[10 + i] = CRGB(base_data[i], 0, 0);
-//    leds[10 + SPLASH_WIDTH+ 10 + i] = CRGB(0, 0, base_data2[i]);
-//    //leds[i] = CRGB(255, 0, 0);
-//  }
-
   EVERY_N_MILLISECONDS(25) { 
     for (int i = 0; i < SPLASH_WIDTH; i++) {
       base_data[i] = (int)(base_data[i] * 0.85);
@@ -219,20 +205,5 @@ void loop() {
         base_data[i+1] = max(base_data[i+1], base_data[i]);
       }
     }
-
   }
 }
-
-
-// https://github.com/atuline/FastLED-Demos/blob/master/aatemplate/aatemplate.ino
-//   dots fading out slowly
-// https://github.com/atuline/FastLED-Demos/blob/master/easing/easing.ino
-//   good ease out example
-// https://github.com/atuline/FastLED-Demos/blob/master/fill_grad/fill_grad.ino
-//   nice gradient example
-// https://github.com/atuline/FastLED-Demos/blob/master/juggle/juggle.ino
-//   nice moving lines (too quick - make it better and it should work)
-// ! https://github.com/atuline/FastLED-Demos/blob/master/lightnings/lightnings.ino
-//   even better moving lines (doesn't work)
-// https://github.com/atuline/FastLED-Demos/blob/master/two_sin_pal_demo/two_sin_pal_demo.ino
-//   sinus waves - not bad but requires some work
