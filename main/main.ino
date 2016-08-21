@@ -34,6 +34,12 @@ int old_rms_height;
 #define NUM_STRIPS 8
 struct CRGB leds[NUM_LEDS * NUM_STRIPS];                                   // Initialize our LED array.
 
+#define NUM_BASS_STRIPS 4
+CRGB* bass_strips[NUM_BASS_STRIPS] = {leds + 1 * NUM_LEDS, leds + 2 * NUM_LEDS, leds + 5 * NUM_LEDS, leds + 6 * NUM_LEDS};
+
+#define NUM_TREBLE_STRIPS 2
+CRGB* treble_strips[NUM_TREBLE_STRIPS] = {leds + 0 * NUM_LEDS, leds + 4 * NUM_LEDS};
+
 void setup() {
   Serial.begin(9600);
   pinMode(A3, INPUT);
@@ -83,7 +89,8 @@ uint8_t toColor(float x) {
   return (int)(x * 255);
 }
 
-void fill_rainbow(struct CRGB * pFirstLED, int numToFill,
+void fill_rainbow(struct CRGB * strips[], int num_strips,
+                  int numToFill,
                   uint8_t initialhue,
                   uint8_t deltahue,
                   uint8_t value,
@@ -93,7 +100,10 @@ void fill_rainbow(struct CRGB * pFirstLED, int numToFill,
     hsv.val = value;
     hsv.sat = saturation;
     for (int i = 0; i < numToFill; i++) {
-        pFirstLED[i] = hsv;
+        for (int j = 0; j < num_strips; j++) {
+          strips[j][i] = hsv;
+        }
+        
         hsv.hue += deltahue;
     }
 }
@@ -167,7 +177,8 @@ void loop() {
   // Rainbow (bass)
   
   EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
-    fill_rainbow(leds + NUM_LEDS, 
+    fill_rainbow(bass_strips,
+                 NUM_BASS_STRIPS, 
                  NUM_LEDS, 
                  ++rainbow_hue, 
                  RAINBOW_DELTA_HUE, 
@@ -180,10 +191,12 @@ void loop() {
   for (int i = 0; i < NUM_LEDS; i++) {
     int x = (i + dots_offset) % GAP_WIDTH;
     int level = (int)(max(treble_level_smoothed, DOTS_MIN_BRIGHTNESS) * GAP_WIDTH);
-    if (level < x) {
-      leds[i] = 0;
-    } else {
-      leds[i] = CHSV(dots_hue, DOTS_SATURATION, 255 - (x == 0 ? 0 : (DOTS_FADEOUT / GAP_WIDTH) * (GAP_WIDTH - level + x)));
+    for (int j = 0; j < NUM_TREBLE_STRIPS; ++j) {
+      if (level < x) {
+        treble_strips[j][i] = 0;
+      } else {
+        treble_strips[j][i] = CHSV(dots_hue, DOTS_SATURATION, 255 - (x == 0 ? 0 : (DOTS_FADEOUT / GAP_WIDTH) * (GAP_WIDTH - level + x)));
+      }
     }
   }
 
