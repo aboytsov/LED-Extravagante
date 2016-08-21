@@ -57,8 +57,8 @@ void setup() {
 
 #define BASE_SIGMOID_CENTER   0.35
 #define BASE_SIGMOID_TILT     13
-#define TREBLE_SIGMOID_CENTER 0.55
-#define TREBLE_SIGMOID_TILT   5
+#define TREBLE_SIGMOID_CENTER 0.7
+#define TREBLE_SIGMOID_TILT   3
 #define BASE_LEVEL_DECAY      0.85
 #define TREBLE_LEVEL_DECAY    0.95
 
@@ -133,18 +133,18 @@ void loop() {
     // base
     base_level = Sigmoid((fft1024.read(1, 2)-BASE_SIGMOID_CENTER)*BASE_SIGMOID_TILT);    
     // voice, snare, instrumentals
-    treble_level = Sigmoid((fft1024.read(7, 22)-TREBLE_SIGMOID_CENTER)*TREBLE_SIGMOID_TILT);
+    treble_level = Sigmoid((fft1024.read(7, 22) * 0.7 + fft1024.read(23, 66) * 0.3  -TREBLE_SIGMOID_CENTER)*TREBLE_SIGMOID_TILT);
 
     base_level_smoothed = max(base_level, base_level_smoothed);
     treble_level_smoothed = max(treble_level, treble_level_smoothed);
 
     // Populate the display.
     // Enable the display with a serial input (i.e. any character sent as a serial input).
-    EVERY_N_MILLISECONDS(100) {
-      if (Serial.read() != -1) {
-        display_is_updating = !display_is_updating;
-      }
-    }
+//    EVERY_N_MILLISECONDS(100) {
+//      if (Serial.read() != -1) {
+//        display_is_updating = !display_is_updating;
+//      }
+//    }
     if (display_is_updating) {
       for (int i = 0; i < 18; ++i) {
         int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * sound_level[i]);
