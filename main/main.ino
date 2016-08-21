@@ -104,13 +104,13 @@ void loop() {
     level[13] = fft1024.read(185, 257);
     level[14] = fft1024.read(258, 359);
     level[15] = fft1024.read(360, 511);
-    level[16] = fft1024.read(1, 2);        // bass
-    level[17] = fft1024.read(67, 359);     // voice
+    level[16] = fft1024.read(1, 2);      // bass
+    level[17] = fft1024.read(7, 22);     // voice, snare, instrumentals.
 //    Serial.println("before tr");
 //    Serial.println(level[16]);
 //    Serial.println(level[17]);
     level[16] = Sigmoid((level[16]-0.35)*13);
-    level[17] = Sigmoid((level[17]*0.8-0.5)*9);
+    level[17] = Sigmoid((level[17]-0.45)*13);
 //    Serial.println("--");
 //    Serial.println(level[16]);
 //    Serial.println(level[17]);
@@ -207,7 +207,7 @@ void loop() {
   EVERY_N_MILLISECONDS(25) { 
     for (int i = 0; i < SPLASH_WIDTH; i++) {
       base_data[i] = (int)(base_data[i] * 0.85);
-      base_data2[i] = (int)(base_data2[i] * 0.95);
+      base_data2[i] = (int)(base_data2[i] * 0.7);
     }
   }
 
