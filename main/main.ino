@@ -63,11 +63,15 @@ uint8_t rainbow_hue = 0;                // current rainbow hue
 
 #define NUM_DOTS 8
 #define GAP_WIDTH (NUM_LEDS / NUM_DOTS)
-#define DOTS_SATURATION 130
+#define DOTS_SATURATION 255
 #define DOTS_MIN_BRIGHTNESS 0.15
 #define DOTS_FADEOUT 190
-uint8_t dots_hue = 0;                   // current hue for treble dots
-#define DOTS_HUE_CHANGE_SPEED 300       
+#define DOTS_MIN_HUE 120                // Aqua
+#define DOTS_MAX_HUE 180                // Purple
+uint8_t dots_hue = DOTS_MIN_HUE;        // current hue for treble dots
+uint8_t dots_hue_dir = 1;
+#define DOTS_HUE_CHANGE_SPEED 200
+
 int dots_offset = 0;                    // current offset for treble dots
 #define DOTS_SPEED 200                  // dots speed (step delay in ms)
 
@@ -95,13 +99,6 @@ void fill_rainbow(struct CRGB * pFirstLED, int numToFill,
 }
 
 void loop() {
-  // Enable the display with a serial input (i.e. any character sent as a serial input).
-  EVERY_N_MILLISECONDS(100) {
-    if (Serial.read() != -1) {
-      display_is_updating = !display_is_updating;
-    }
-  }
-  
   // Display the sound levels
   if (fft1024.available()) {
     // read the 512 FFT frequencies into 16 levels
@@ -132,12 +129,13 @@ void loop() {
     base_level_smoothed = max(base_level, base_level_smoothed);
     treble_level_smoothed = max(treble_level, treble_level_smoothed);
 
-    EVERY_N_MILLISECONDS(25) { 
-      base_level_smoothed *= BASE_LEVEL_DECAY;
-      treble_level_smoothed *= TREBLE_LEVEL_DECAY;
-    }
-
     // Populate the display.
+    // Enable the display with a serial input (i.e. any character sent as a serial input).
+    EVERY_N_MILLISECONDS(100) {
+      if (Serial.read() != -1) {
+        display_is_updating = !display_is_updating;
+      }
+    }
     if (display_is_updating) {
       for (int i = 0; i < 18; ++i) {
         int new_freq_width = (int) ((ILI9341_TFTWIDTH - 10) * sound_level[i]);
@@ -148,8 +146,7 @@ void loop() {
         }
         old_freq_width[i] = new_freq_width;
       }
-
-      // Disploy the total amplitude on the display.
+       // Disploy the total amplitude on the display.
       if (rms.available()) {
         int new_rms_height = (int) (rms.read() * ILI9341_TFTHEIGHT);
         if (new_rms_height < old_rms_height) {
@@ -160,8 +157,14 @@ void loop() {
         old_rms_height = new_rms_height;
       }
     }
+  }
 
-  // Rainbow (base)
+  EVERY_N_MILLISECONDS(25) { 
+    base_level_smoothed *= BASE_LEVEL_DECAY;
+    treble_level_smoothed *= TREBLE_LEVEL_DECAY;
+  }
+
+  // Rainbow (bass)
   
   EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
     fill_rainbow(leds + NUM_LEDS, 
@@ -185,13 +188,15 @@ void loop() {
   }
 
   EVERY_N_MILLISECONDS(DOTS_HUE_CHANGE_SPEED) {
-    dots_hue++;
+    dots_hue += dots_hue_dir;
+    if (dots_hue == DOTS_MAX_HUE || dots_hue == DOTS_MIN_HUE) {
+      dots_hue_dir = -dots_hue_dir;
+    }
   }
 
   EVERY_N_MILLISECONDS(DOTS_SPEED) {
     dots_offset = (dots_offset + 1) % NUM_LEDS;
   }
 
-  FastLED.show();    
-  }
+  FastLED.show();
 }
