@@ -57,10 +57,10 @@ void setup() {
 
 #define BASE_SIGMOID_CENTER   0.35
 #define BASE_SIGMOID_TILT     13
-#define TREBLE_SIGMOID_CENTER 0.45
-#define TREBLE_SIGMOID_TILT   13
+#define TREBLE_SIGMOID_CENTER 0.55
+#define TREBLE_SIGMOID_TILT   5
 #define BASE_LEVEL_DECAY      0.85
-#define TREBLE_LEVEL_DECAY    0.7
+#define TREBLE_LEVEL_DECAY    0.95
 
 #define RAINBOW_SPEED 8                 // rainbow step in ms
 #define RAINBOW_DELTA_HUE 4             // hue change between pixels
@@ -69,17 +69,16 @@ uint8_t rainbow_hue = 0;                // current rainbow hue
 
 #define NUM_DOTS 8
 #define GAP_WIDTH (NUM_LEDS / NUM_DOTS)
-#define DOTS_SATURATION 255
+#define DOTS_SATURATION 160
 #define DOTS_MIN_BRIGHTNESS 0.15
-#define DOTS_FADEOUT 190
-#define DOTS_MIN_HUE 120                // Aqua
-#define DOTS_MAX_HUE 180                // Purple
-uint8_t dots_hue = DOTS_MIN_HUE;        // current hue for treble dots
-uint8_t dots_hue_dir = 1;
+#define DOTS_FADEOUT 100
+#define DOTS_MIN_HUE_REMOVE 25          // Aqua
+#define DOTS_MAX_HUE_REMOVE 65          // Purple
+uint8_t dots_hue = 0;                   // current hue for treble dots
 #define DOTS_HUE_CHANGE_SPEED 200
 
 int dots_offset = 0;                    // current offset for treble dots
-#define DOTS_SPEED 200                  // dots speed (step delay in ms)
+#define DOTS_SPEED 300                  // dots speed (step delay in ms)
 
 float Sigmoid(float x){
     return 1 / (1 + exp(-1 * x));
@@ -192,19 +191,16 @@ void loop() {
     int x = (i + dots_offset) % GAP_WIDTH;
     int level = (int)(max(treble_level_smoothed, DOTS_MIN_BRIGHTNESS) * GAP_WIDTH);
     for (int j = 0; j < NUM_TREBLE_STRIPS; ++j) {
-      if (level < x) {
+      if (x > level) {
         treble_strips[j][i] = 0;
       } else {
-        treble_strips[j][i] = CHSV(dots_hue, DOTS_SATURATION, 255 - (x == 0 ? 0 : (DOTS_FADEOUT / GAP_WIDTH) * (GAP_WIDTH - level + x)));
+        treble_strips[j][i] = CHSV(dots_hue, DOTS_SATURATION, 255 - 10 * (GAP_WIDTH - x + level));
       }
     }
   }
 
   EVERY_N_MILLISECONDS(DOTS_HUE_CHANGE_SPEED) {
-    dots_hue += dots_hue_dir;
-    if (dots_hue == DOTS_MAX_HUE || dots_hue == DOTS_MIN_HUE) {
-      dots_hue_dir = -dots_hue_dir;
-    }
+    if (++dots_hue == DOTS_MIN_HUE_REMOVE) dots_hue = DOTS_MAX_HUE_REMOVE;
   }
 
   EVERY_N_MILLISECONDS(DOTS_SPEED) {
