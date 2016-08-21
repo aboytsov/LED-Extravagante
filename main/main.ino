@@ -21,6 +21,8 @@ AudioConnection          patchCord2(adc, rms);
 float sound_level[18];                   // last 2 levels are base and treble
 float &base_level = sound_level[16];
 float &treble_level = sound_level[17];
+float base_level_smoothed;
+float treble_level_smoothed;
 
 // Display.
 ILI9341_t3 tft = ILI9341_t3(10, 9);
@@ -47,20 +49,33 @@ void setup() {
   tft.fillScreen(ILI9341_BLACK);
 }
 
-int base_data[SPLASH_WIDTH];
-int base_data2[SPLASH_WIDTH];
-
 #define BASE_SIGMOID_CENTER   0.35
 #define BASE_SIGMOID_TILT     13
 #define TREBLE_SIGMOID_CENTER 0.45
 #define TREBLE_SIGMOID_TILT   13
+#define BASE_LEVEL_DECAY      0.85
+#define TREBLE_LEVEL_DECAY    0.7
 
 #define RAINBOW_SPEED 8                 // rainbow step in ms
 #define RAINBOW_DELTA_HUE 4             // hue change between pixels
+#define RAINBOW_BASE_LEVEL 0.4          // rainbow base level brightness (no sound)
 uint8_t rainbow_hue = 0;                // current rainbow hue
+
+#define NUM_DOTS 8
+#define GAP_WIDTH (NUM_LEDS / NUM_DOTS)
+#define DOTS_SATURATION 130
+#define DOTS_MIN_BRIGHTNESS 0.15
+uint8_t dots_hue = 0;                   // current hue for treble dots
+#define DOTS_HUE_CHANGE_SPEED 300       
+int dots_offset = 0;                    // current offset for treble dots
+#define DOTS_SPEED 200                  // dots speed (step delay in ms)
 
 float Sigmoid(float x){
     return 1 / (1 + exp(-1 * x));
+}
+
+uint8_t toColor(float x) {
+  return (int)(x * 255);
 }
 
 void fill_rainbow(struct CRGB * pFirstLED, int numToFill,
@@ -113,6 +128,14 @@ void loop() {
     // voice, snare, instrumentals
     treble_level = Sigmoid((fft1024.read(7, 22)-TREBLE_SIGMOID_CENTER)*TREBLE_SIGMOID_TILT);
 
+    base_level_smoothed = max(base_level, base_level_smoothed);
+    treble_level_smoothed = max(treble_level, treble_level_smoothed);
+
+    EVERY_N_MILLISECONDS(25) { 
+      base_level_smoothed *= BASE_LEVEL_DECAY;
+      treble_level_smoothed *= TREBLE_LEVEL_DECAY;
+    }
+
     // Populate the display.
     if (display_is_updating) {
       for (int i = 0; i < 18; ++i) {
@@ -137,73 +160,47 @@ void loop() {
       }
     }
 
-  float base_ratio = 0.4;
+  // Rainbow (base)
+  
   EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
-    fill_rainbow(leds + NUM_LEDS, NUM_LEDS, ++rainbow_hue, RAINBOW_DELTA_HUE, 
-                 (int)(base_ratio * 255 + (1.0 - base_ratio) * base_data[0]), 240); 
+    fill_rainbow(leds + NUM_LEDS, 
+                 NUM_LEDS, 
+                 ++rainbow_hue, 
+                 RAINBOW_DELTA_HUE, 
+                 toColor(RAINBOW_BASE_LEVEL + (1.0 - RAINBOW_BASE_LEVEL) * base_level_smoothed), 
+                 240);
   }
 
-  if (sound_level[16] > 0) {
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = max(sound_level[16] * 256, base_data[i]);
-    }
-  }
+  // Dots (treble)
 
-  if (sound_level[17] > 0) {
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data2[i] = max(sound_level[17] * 256, base_data2[i]);
-    }
-  }
-
-  static int num_dots = 8;
-  static int gap = NUM_LEDS / num_dots;   
-  static uint8_t hue = 0;
-  static uint8_t offset = 0;
-
-  for( int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < NUM_LEDS; i++) {
     CHSV hsv;
-    hsv.hue = hue;
+    hsv.hue = dots_hue;
     hsv.val = 255;
-    hsv.sat = 130;
-    int x = (i + offset) % gap;
+    hsv.sat = DOTS_SATURATION;
+    int x = (i + dots_offset) % GAP_WIDTH;
     if (x == 0) {
       leds[i] = hsv;
     } else {
-      int level = (int)(((float)(max(base_data2[0], 30)) / 256.0) * gap);
+      int level = (int)(max(treble_level_smoothed, DOTS_MIN_BRIGHTNESS) * GAP_WIDTH);
       if (level < x) {
         leds[i] = 0;
       } else {
-        static uint8_t fadeout_step = 190 / gap;
-        hsv.val = 255 - fadeout_step * (gap - level + x);
+        static uint8_t fadeout_step = 190 / GAP_WIDTH;
+        hsv.val = 255 - fadeout_step * (GAP_WIDTH - level + x);
         leds[i] = hsv;
       }
     }
   }
 
-  FastLED.show();
-
-  EVERY_N_MILLISECONDS(300) {
-    hue++;
+  EVERY_N_MILLISECONDS(DOTS_HUE_CHANGE_SPEED) {
+    dots_hue++;
   }
 
-  EVERY_N_MILLISECONDS(200) {
-    offset++;         // correct for LEDs number
-  }
-  
-  EVERY_N_MILLISECONDS(25) { 
-    for (int i = 0; i < SPLASH_WIDTH; i++) {
-      base_data[i] = (int)(base_data[i] * 0.85);
-      base_data2[i] = (int)(base_data2[i] * 0.7);
-    }
+  EVERY_N_MILLISECONDS(DOTS_SPEED) {
+    dots_offset = (dots_offset + 1) % NUM_LEDS;
   }
 
-  EVERY_N_MILLISECONDS(500) {
-    for (int i = 1; i < SPLASH_WIDTH / 2; i++) {
-        base_data[i-1] = max(base_data[i-1], base_data[i]);
-      }
-    for (int i = SPLASH_WIDTH - 2; i >= SPLASH_WIDTH / 2; i--) {
-        base_data[i+1] = max(base_data[i+1], base_data[i]);
-      }
-    }
+  FastLED.show();    
   }
 }
