@@ -64,7 +64,10 @@ void setup() {
 
 #define RAINBOW_SPEED 20                                     // rainbow step in ms
 #define RAINBOW_DELTA_HUE (256.0 * 3 / NUM_LEDS)             // hue change between pixels
-#define RAINBOW_BASE_LEVEL 0.4                               // rainbow base level brightness (no sound)
+#define RAINBOW_WITH_SOUND_BASE_LEVEL 0.2                    // rainbow base level brightness when there is bass.
+#define RAINBOW_NO_SOUND_BASE_LEVEL 0.5                      // rainbow base level brightness when there is no bass for a while.
+#define RAINBOW_BASE_LEVEL_INCREASE_SECS 20
+int no_bass_millis = 0;
 uint8_t rainbow_hue = 0;                                     // current rainbow hue
 
 #define NUM_DOTS 8
@@ -178,12 +181,23 @@ void loop() {
   EVERY_N_MILLISECONDS(RAINBOW_SPEED) {    
     ++rainbow_hue;
   }
+  // When the bass stops, increase to a higher brightness. However, when there is bass we want more contrast.
+  EVERY_N_MILLISECONDS(5) {
+    if (base_level < 0.2) {
+      no_bass_millis = min(RAINBOW_BASE_LEVEL_INCREASE_SECS * 1000, no_bass_millis + 5);
+    } else if (base_level < 0.6) {
+      no_bass_millis = max(no_bass_millis - 30, 0);
+    } else {
+      no_bass_millis = 0;
+    }
+  }
+  float adjusted_rainbow_base_level = RAINBOW_WITH_SOUND_BASE_LEVEL + (RAINBOW_NO_SOUND_BASE_LEVEL - RAINBOW_WITH_SOUND_BASE_LEVEL) * (no_bass_millis / (RAINBOW_BASE_LEVEL_INCREASE_SECS * 1000.0));
   fill_rainbow(bass_strips,
                NUM_BASS_STRIPS, 
                NUM_LEDS, 
                rainbow_hue, 
                RAINBOW_DELTA_HUE, 
-               toColor(RAINBOW_BASE_LEVEL + (1.0 - RAINBOW_BASE_LEVEL) * base_level_smoothed), 
+               toColor(adjusted_rainbow_base_level + (1.0 - adjusted_rainbow_base_level) * base_level_smoothed), 
                240);
 
   // Dots (treble)
