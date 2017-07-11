@@ -9,10 +9,8 @@
 #include <SerialFlash.h>
 #include <Wire.h>
 
-#include "adc_fixed.h"
-
 // Audio input.
-AudioInputAnalogFixed    adc(A3);
+AudioInputAnalog    adc(A3);
 AudioAnalyzeFFT1024      fft1024;
 AudioAnalyzeRMS          rms;
 AudioConnection          patchCord1(adc, fft1024);
