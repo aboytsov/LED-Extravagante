@@ -46,6 +46,7 @@ void loop() {
     band_display.UpdateBand(peak_band_id, peak.read());
   }
 
+  // On Teensy 3.2, this loop takes ~700ms max with 33 bands.
   band_display.Loop();
 }
 
