@@ -37,7 +37,7 @@ void BandDisplay::Loop() {
     for (int i = 0; i < num_bands_; ++i) {
       Band& band = bands_[i];
       if (band.decaying) {
-        band.current_level = 0.97 * band.current_level;
+        band.current_level = max(band.current_level - 0.03, 0.0);
       }
     }
   }

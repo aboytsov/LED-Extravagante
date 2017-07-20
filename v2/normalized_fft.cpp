@@ -2,42 +2,40 @@
 
 #include <FastLED.h>
 
+#define TARGET_RMS 0.5
+
 NormalizedFft::NormalizedFft(AudioAnalyzeFFT1024* fft)
-  : fft_(fft), num_adjustments_(0), max_peak_since_last_update_(0), peak_(0.7) {}
+  : fft_(fft), num_adjustments_(0), max_rms_since_last_update_(0), rms_(TARGET_RMS) {}
 
-void NormalizedFft::OnPeakAvailable(float peak) {
-  recorded_peak_ = peak;
-  max_peak_since_last_update_ = max(max_peak_since_last_update_, peak);
+void NormalizedFft::OnRmsAvailable(float rms) {
+  max_rms_since_last_update_ = max(max_rms_since_last_update_, rms);
 
-  EVERY_N_MILLISECONDS(1000) {
+  EVERY_N_MILLISECONDS(500) {
     float adjustment_rate;
 
-    if (num_adjustments_ == 0) {
-      // Don't touch anything right when the device boots.
-      adjustment_rate = 0;
-    } else if (max_peak_since_last_update_ < 0.18) {
+    if (max_rms_since_last_update_ < 0.07) {
       // Don't touch anything if there's nothing playing.
       adjustment_rate = 0;
-    } else if (num_adjustments_ < 6) {
-      // For the first few seconds after the device is turned on, adjust quickly.
-      adjustment_rate = 0.1;
-    } else if (max_peak_since_last_update_ - peak_ > 0.1) {
-      // Big difference, adjust quickly.
+    } else if (num_adjustments_ < 10) {
+      // For the first 5 seconds after the device is turned on, adjust quickly.
       adjustment_rate = 0.05;
+    } else if (max_rms_since_last_update_ - rms_ > 0.1) {
+      // Big difference, adjust quickly.
+      adjustment_rate = 0.025;
     } else {
       // Otherwise, adjust slowly.
-      adjustment_rate = 0.003;
+      adjustment_rate = 0.0015;
     }
 
     // Adjust.
-    if (max_peak_since_last_update_ > peak_) {
-      peak_ = min(peak_ + adjustment_rate, max_peak_since_last_update_);
+    if (max_rms_since_last_update_ > rms_) {
+      rms_ = min(rms_ + adjustment_rate, max_rms_since_last_update_);
     } else {
-      peak_ = max(max(peak_ - adjustment_rate, max_peak_since_last_update_), 0.18);
+      rms_ = max(max(rms_ - adjustment_rate, max_rms_since_last_update_), 0.07);
     }
 
     ++num_adjustments_;
-    max_peak_since_last_update_ = 0;
+    max_rms_since_last_update_ = 0;
   }
 }
 
@@ -46,11 +44,11 @@ bool NormalizedFft::available() {
 }
 
 float NormalizedFft::Normalize(float value) {
-  return min(1.0, value * 0.7 / peak_);
+  return min(1.0, value * TARGET_RMS / rms_);
 }
 
-float NormalizedFft::Peak() {
-  return Normalize(recorded_peak_);
+float NormalizedFft::Rms() {
+  return rms_;
 }
 
 float NormalizedFft::read(int bin) {

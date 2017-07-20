@@ -1,16 +1,14 @@
 #ifndef _IDLENESS_DETECTOR_H_
 #define _IDLENESS_DETECTOR_H_
 
-#include <Audio.h>
-
+// Detects if there is no music playing.
 class IdlenessDetector {
  public:
-  void OnPeakAvailable(float peak_value);
+  void OnRmsAvailable(float rms);
 
   float SecondsIdle();
 
  private:
-  AudioAnalyzePeak* peak_;
   unsigned long last_idle_time_millis_ = 0;
 };
 #endif

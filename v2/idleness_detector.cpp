@@ -1,7 +1,9 @@
 #include "idleness_detector.h"
 
-void IdlenessDetector::OnPeakAvailable(float peak_value) {
-  if (peak_value > 0.18) {
+#include <Audio.h>
+
+void IdlenessDetector::OnRmsAvailable(float rms) {
+  if (rms > 0.07) {
     last_idle_time_millis_ = millis();
   }
 }
