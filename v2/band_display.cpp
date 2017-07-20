@@ -44,11 +44,11 @@ void BandDisplay::Loop() {
 
   for (int i = 0; i < num_bands_; ++i) {
     Band& band = bands_[i];
-    int current_y = static_cast<int>(band.current_level * band.height) + band.y; 
-    int displayed_y = static_cast<int>(band.displayed_level * band.height) + band.y;
+    int current_y = band.y + band.height - 1 - static_cast<int>(band.current_level * (band.height - 1)); 
+    int displayed_y = band.y + band.height - 1 - static_cast<int>(band.displayed_level * (band.height - 1));
     if (current_y != displayed_y) {
-      display_->drawLine(displayed_y, band.x, displayed_y, band.x + band.width - 1, ILI9341_BLACK);
-      display_->drawLine(current_y, band.x, current_y, band.x + band.width - 1, band.color);
+      display_->drawLine(band.x, displayed_y, band.x + band.width - 1, displayed_y, ILI9341_BLACK);
+      display_->drawLine(band.x, current_y, band.x + band.width - 1, current_y, band.color);
       band.displayed_level = band.current_level;
     }
   }

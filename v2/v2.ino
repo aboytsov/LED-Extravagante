@@ -8,6 +8,12 @@
 #include "band_display.h"
 #include "fft_display.h"
 #include "idleness_detector.h"
+#include "normalized_fft.h"
+
+#define HEIGHT 240
+#define WIDTH 320
+#define TEXT_HEIGHT 20
+#define BAND_WIDTH 30
 
 // Audio input.
 AudioInputAnalog adc(A3);
@@ -17,15 +23,17 @@ AudioAnalyzeFFT1024 fft;
 AudioConnection patch_cord2(adc, fft);
 
 IdlenessDetector idleness_detector;
+NormalizedFft normalized_fft(&fft);
 
 // Display.
 ILI9341_t3 display = ILI9341_t3(10, 9);
 BandDisplay band_display(&display);
-FftDisplay fft_display(&fft, &band_display, /*x=*/160, /*y=*/0, /*width=*/160, /*height=*/240, /*bins=*/32, ILI9341_YELLOW);
-int peak_band_id = band_display.AddBand(0, 0, 30, 240, ILI9341_RED, /*decaying=*/true);
+FftDisplay fft_display(&normalized_fft, &band_display, /*x=*/160, /*y=*/TEXT_HEIGHT, /*width=*/160, /*height=*/HEIGHT - TEXT_HEIGHT, /*bins=*/32, ILI9341_YELLOW);
+int peak_band_id = band_display.AddBand(0, TEXT_HEIGHT, BAND_WIDTH - 1, 220, ILI9341_RED, /*decaying=*/true);
+int normalized_peak_band_id = band_display.AddBand(BAND_WIDTH, TEXT_HEIGHT, BAND_WIDTH - 1, 220, ILI9341_RED, /*decaying=*/true);
 
-int bass1_band_id = band_display.AddBand(30, 0, 30, 240, ILI9341_GREEN, /*decaying=*/false);
-int bass2_band_id = band_display.AddBand(60, 0, 30, 240, ILI9341_BLUE, /*decaying=*/false);
+int bass1_band_id = band_display.AddBand(2 * BAND_WIDTH, TEXT_HEIGHT, BAND_WIDTH - 1, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false);
+int bass2_band_id = band_display.AddBand(3 * BAND_WIDTH, TEXT_HEIGHT, BAND_WIDTH - 1, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false);
 
 // LEDs.
 #define NUM_LEDS 225
@@ -42,7 +50,26 @@ void setup() {
   AudioMemory(12);
 
   display.begin();
+  display.setRotation(1);
   display.fillScreen(ILI9341_BLACK);
+
+  // Set up header text.
+  display.setTextColor(ILI9341_WHITE);
+  display.setTextSize(1);
+  display.setCursor(2, 6);
+  display.println("Peak");
+  display.setCursor(2 + BAND_WIDTH, 2);
+  display.println("Norm");
+  display.setCursor(2 + BAND_WIDTH, 10);
+  display.println("Peak");
+  display.setCursor(160, 6);
+  display.println("Normalized FFT");
+  display.drawLine(0, TEXT_HEIGHT - 1, WIDTH - 1, TEXT_HEIGHT - 1, ILI9341_WHITE);
+
+  // Bring band line edges.
+  display.drawLine(BAND_WIDTH - 1, TEXT_HEIGHT, BAND_WIDTH - 1, HEIGHT - 1, ILI9341_RED);
+  display.drawLine(2 * BAND_WIDTH - 1, TEXT_HEIGHT, 2 * BAND_WIDTH - 1, HEIGHT - 1, ILI9341_RED);
+  display.drawLine(158, TEXT_HEIGHT, 158, HEIGHT - 1, ILI9341_YELLOW);
 
   FastLED.addLeds<OCTOWS2811>(leds, NUM_LEDS);
   FastLED.show();
@@ -53,18 +80,16 @@ void loop() {
     float peak_value = peak.read();
     band_display.UpdateBand(peak_band_id, peak_value);
     idleness_detector.OnPeakAvailable(peak_value);
-  }
-
-  EVERY_N_MILLISECONDS(1000) {
-    Serial.println(idleness_detector.SecondsIdle());
+    normalized_fft.OnPeakAvailable(peak_value);
+    band_display.UpdateBand(normalized_peak_band_id, normalized_fft.Peak());
   }
   
-  if (fft.available()) {
+  if (normalized_fft.available()) {
     fft_display.OnFftAvailable();
 
-    float bass1 = min(1, max(0, (fft.read(1))*8));
+    float bass1 = min(1, max(0, (normalized_fft.read(1))*8));
     band_display.UpdateBand(bass1_band_id, bass1);
-    float bass2 = min(1, max(0, (fft.read(3, 5) - 0.05)*6));
+    float bass2 = min(1, max(0, (normalized_fft.read(3, 5) - 0.05)*6));
     band_display.UpdateBand(bass2_band_id, bass2);
 
 //    for (int i = 0; i < NUM_LEDS; ++i) {
@@ -84,8 +109,6 @@ void loop() {
       }
     }
   }
-
-
 
   FastLED.show();
 
