@@ -8,7 +8,9 @@ class IdlenessDetector {
 
   float SecondsIdle();
 
+  void DoCommands();
+
  private:
-  unsigned long last_idle_time_millis_ = 0;
+  long last_idle_time_millis_ = 0;
 };
 #endif

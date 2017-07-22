@@ -7,11 +7,11 @@
 IdleAnimation::IdleAnimation(CRGB* strip, int num_leds)
   : strip_(strip), num_leds_(num_leds), idle_(false),
     speed_up_(1.0),
-    fading_factor_(225),
+    fading_factor_(249),
     pixels_per_sec_(1.0),
     hue_rotation_secs_(120),
-    reversal_freq_secs_(540),
-    secs_to_reverse_(60),
+    reversal_freq_secs_(480),
+    secs_to_reverse_(120),
     reverse_speed_adjusting_delay_ms_(30) {}
  
 void IdleAnimation::OnIdle() {
@@ -77,7 +77,7 @@ void IdleAnimation::OnIdle() {
 }
 
 uint32_t IdleAnimation::FadeDelayMillis() {
-  return 1000.0 / speed_up_;
+  return 333.0 / speed_up_;
 }
 
 uint32_t IdleAnimation::RotationDelayMillis() {
@@ -118,6 +118,9 @@ void IdleAnimation::DoCommands() {
         reversal_timer_.setPeriod(ReversalDelayMillis());
       } else if (CheckSerial('s')) {
         secs_to_reverse_ = AdjustInt("secs_to_reverse");
+      } else if (CheckSerial('t')) {
+        Serial.println("Triggering reversal");
+        reversal_timer_.trigger();
       }
     }
   }

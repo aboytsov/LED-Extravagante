@@ -114,9 +114,10 @@ void loop() {
 
   {
     Profile p("DoCommands");
-    debug_display.DoCommands();
-    fft_distribution_display.DoCommands();
-    idle_animation.DoCommands();
+    idleness_detector.DoCommands();  // Prefix l.
+    debug_display.DoCommands();  // Prefix d.
+    fft_distribution_display.DoCommands();  // Prefix f.
+    idle_animation.DoCommands();  // Prefix i.
     if (CheckSerial('s')) {
       if (debug_display.enabled()) {
         debug_display.set_enabled(false);

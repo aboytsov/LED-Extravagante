@@ -86,7 +86,7 @@ void FftDistributionDisplay::DoCommands() {
     return;
   }
 
-  if (CheckSerial('b')) {
+  if (CheckSerial('f')) {
     start_bin_ = Serial.parseInt();
     Serial.read();
     end_bin_ = Serial.parseInt();

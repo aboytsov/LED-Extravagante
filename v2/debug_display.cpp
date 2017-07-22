@@ -1,5 +1,7 @@
 #include "debug_display.h"
 
+#include "utils.h"
+
 #define HEIGHT 240
 #define WIDTH 320
 #define TEXT_HEIGHT 20
@@ -116,6 +118,8 @@ void DebugDisplay::DoCommands() {
   if (!enabled_) {
     return;
   }
-  fft_display_.DoCommands();
+  if (CheckSerial('d')) {
+    fft_display_.DoCommands();
+  }
 }
 

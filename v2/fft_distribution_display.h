@@ -7,7 +7,7 @@
 
 // Displays the distribution of a given bins of the FFT. The bins to display
 // can be changed by typing the following into the Serial monitor:
-// b[start_bin]:[end_bin] (e.g. b0:1 for bins 0 and 1).
+// f[start_bin]:[end_bin] (e.g. b0:1 for bins 0 and 1).
 class FftDistributionDisplay {
  public:
   FftDistributionDisplay(NormalizedFft* fft, ILI9341_t3* display);
