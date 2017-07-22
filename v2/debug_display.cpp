@@ -5,8 +5,8 @@
 #define TEXT_HEIGHT 20
 #define BAND_WIDTH 30
 
-DebugDisplay::DebugDisplay(NormalizedFft* fft, ILI9341_t3* display, bool enabled)
-  : fft_(fft), display_(display), enabled_(enabled),
+DebugDisplay::DebugDisplay(NormalizedFft* fft, ILI9341_t3* display)
+  : fft_(fft), display_(display), enabled_(false),
     band_display_(display),
     fft_display_(fft, &band_display_, /*x=*/160, /*y=*/TEXT_HEIGHT, /*width=*/160, /*height=*/HEIGHT - TEXT_HEIGHT, /*bins=*/32, ILI9341_GREEN),
     peak_band_id_(band_display_.AddBand(0, TEXT_HEIGHT, BAND_WIDTH - 1, 220, ILI9341_RED, /*decaying=*/true)),
@@ -16,13 +16,27 @@ DebugDisplay::DebugDisplay(NormalizedFft* fft, ILI9341_t3* display, bool enabled
     band_2_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 24, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false)),
     band_3_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 48, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false)),
     band_4_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 72, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false)) {
+}
 
+bool DebugDisplay::enabled() {
+  return enabled_;
+}
+
+void DebugDisplay::set_enabled(bool value) {
+  if (enabled_ != value) {
+    enabled_ = value;
+    if (enabled_) {
+      Begin();
+    }
+  }
 }
 
 void DebugDisplay::Begin() {
   if (!enabled_) {
     return;
   }
+  display_->fillScreen(ILI9341_BLACK);
+  
   // Set up header text.
   display_->setTextColor(ILI9341_WHITE);
   display_->setTextSize(1);
@@ -63,6 +77,34 @@ void DebugDisplay::OnFftAvailable() {
   fft_display_.OnFftAvailable();
 }
 
+void DebugDisplay::UpdateBand1(float value) {
+  if (!enabled_) {
+    return;
+  }
+  band_display_.UpdateBand(band_1_id_, value);
+}
+
+void DebugDisplay::UpdateBand2(float value) {
+  if (!enabled_) {
+    return;
+  }
+  band_display_.UpdateBand(band_2_id_, value);
+}
+
+void DebugDisplay::UpdateBand3(float value) {
+  if (!enabled_) {
+    return;
+  }
+  band_display_.UpdateBand(band_3_id_, value);
+}
+
+void DebugDisplay::UpdateBand4(float value) {
+  if (!enabled_) {
+    return;
+  }
+  band_display_.UpdateBand(band_4_id_, value);
+}
+
 void DebugDisplay::Loop() {
   if (!enabled_) {
     return;
@@ -70,19 +112,10 @@ void DebugDisplay::Loop() {
   band_display_.Loop();
 }
 
-void DebugDisplay::UpdateBand1(float value) {
-  band_display_.UpdateBand(band_1_id_, value);
-}
-
-void DebugDisplay::UpdateBand2(float value) {
-  band_display_.UpdateBand(band_2_id_, value);
-}
-
-void DebugDisplay::UpdateBand3(float value) {
-  band_display_.UpdateBand(band_3_id_, value);
-}
-
-void DebugDisplay::UpdateBand4(float value) {
-  band_display_.UpdateBand(band_4_id_, value);
+void DebugDisplay::DoCommands() {
+  if (!enabled_) {
+    return;
+  }
+  fft_display_.DoCommands();
 }
 

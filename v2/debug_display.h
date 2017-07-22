@@ -7,20 +7,24 @@
 
 class DebugDisplay {
  public:
-  DebugDisplay(NormalizedFft* fft, ILI9341_t3* display, bool enabled);
+  DebugDisplay(NormalizedFft* fft, ILI9341_t3* display);
 
-  void Begin();
+  bool enabled();
+  void set_enabled(bool value);
+
   void OnRmsAvailable(float rms);
   void OnPeakAvailable(float peak);
   void OnFftAvailable();
-  void Loop();
-
   void UpdateBand1(float value);
   void UpdateBand2(float value);
   void UpdateBand3(float value);
   void UpdateBand4(float value);
+  void Loop();
+  void DoCommands();
 
  private:
+  void Begin();
+
   NormalizedFft* fft_;
   ILI9341_t3* display_;
   bool enabled_;
