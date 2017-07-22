@@ -12,6 +12,7 @@ class NormalizedFft {
 
   void OnRmsAvailable(float rms);
   float Rms();
+  void DoCommands();
 
   bool available();
   float read(int bin);

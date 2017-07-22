@@ -2,6 +2,8 @@
 
 #include <FastLED.h>
 
+#include "utils.h"
+
 #define TARGET_RMS 0.5
 
 NormalizedFft::NormalizedFft(AudioAnalyzeFFT1024* fft)
@@ -57,6 +59,15 @@ float NormalizedFft::read(int bin) {
 
 float NormalizedFft::read(int start_bin, int end_bin) {
   return Normalize(fft_->read(start_bin, end_bin));
+}
+
+void NormalizedFft::DoCommands() {
+  if (CheckSerial('n')) {
+    Serial.println("Resetting normalization");
+    num_adjustments_ = 0;
+    max_rms_since_last_update_ = 0;
+    rms_ = TARGET_RMS;
+  }
 }
 
 
