@@ -7,7 +7,7 @@
 #define TEXT_HEIGHT 20
 
 FftDistributionDisplay::FftDistributionDisplay(NormalizedFft* fft, ILI9341_t3* display)
-  : fft_(fft), display_(display), enabled_(false), period_(0), start_bin_(0), end_bin_(0) {
+  : fft_(fft), display_(display), enabled_(false), start_bin_(0), end_bin_(0), period_(0) {
   memset(counts_, 0, sizeof(counts_));
   memset(previous_position_, 0, sizeof(previous_position_));
 }

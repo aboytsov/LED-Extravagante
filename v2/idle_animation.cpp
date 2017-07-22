@@ -7,11 +7,11 @@
 IdleAnimation::IdleAnimation(CRGB* strip, int num_leds)
   : strip_(strip), num_leds_(num_leds), idle_(false),
     speed_up_(1.0),
-    fading_factor_(249),
+    fading_factor_(246),
     pixels_per_sec_(1.0),
     hue_rotation_secs_(120),
-    reversal_freq_secs_(480),
-    secs_to_reverse_(120),
+    reversal_freq_secs_(450),
+    secs_to_reverse_(150),
     reverse_speed_adjusting_delay_ms_(30) {}
  
 void IdleAnimation::OnIdle() {
@@ -60,7 +60,8 @@ void IdleAnimation::OnIdle() {
       if (speed_adjustment_factor_ <= 0) {
         slowing_ = false;
         speeding_up_ = true;
-        direction_ = -direction_; 
+        lead_offset_ = (lead_offset_ + direction_ + WIDTH) % WIDTH;
+        direction_ = -direction_;
         speed_adjustment_factor_ = -speed_adjustment_factor_;
         move_timer_.reset();
       }

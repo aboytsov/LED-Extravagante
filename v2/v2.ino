@@ -81,17 +81,17 @@ void loop() {
     fft_distribution_display.OnFftAvailable();
 
     float bass1 = min(1, max(0, (normalized_fft.read(1))*8));
-    debug_display.UpdateBand1(normalized_fft.read(1));
+    debug_display.UpdateBand1(bass1);
     float bass2 = min(1, max(0, (normalized_fft.read(3, 5) - 0.05)*6));
-    debug_display.UpdateBand2(normalized_fft.read(1));
-    debug_display.UpdateBand3(normalized_fft.read(1));
-    debug_display.UpdateBand4(normalized_fft.read(1));
+    debug_display.UpdateBand2(bass1);
+    debug_display.UpdateBand3(bass2);
+    debug_display.UpdateBand4(bass2);
 
     for (int i = 0; i < NUM_LEDS; ++i) {
       if (idleness_detector.SecondsIdle() < 60) { 
-        strips[0][i] = CHSV(194, 188, 255 * (0.2 + (1 - bass1) / 0.8));
+        strips[0][i] = CHSV(194, 188, static_cast<int>(255 * (0.3 + 0.7 * bass1)));
       }
-      strips[1][i] = CHSV(169, 188, 255 * (0.2 + (1 - bass2) / 0.8));
+      strips[1][i] = CHSV(169, 188, 255 * (0.2 +  0.8 * bass2));
     }
   }
 
