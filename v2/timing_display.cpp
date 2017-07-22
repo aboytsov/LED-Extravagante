@@ -63,7 +63,14 @@ void TimingDisplay::DoCommands() {
     return;
   }
   if (CheckSerial('t')) {
-    if (CheckSerial('b')) {
+    if (Serial.peek() == -1) {
+      if (frozen_) {
+        Serial.println("Unfreezing");
+      } else {
+        Serial.println("Freezing");
+      }
+      frozen_ = !frozen_;
+    } else {
       start_bin_ = Serial.parseInt();
       Serial.read();
       end_bin_ = Serial.parseInt();
@@ -75,13 +82,6 @@ void TimingDisplay::DoCommands() {
       Serial.print(" to ");
       Serial.print(end_bin_);
       Serial.println(".");
-    } else {
-      if (frozen_) {
-        Serial.println("Unfreezing");
-      } else {
-        Serial.println("Freezing");
-      }
-      frozen_ = !frozen_;
     }
   }
 }
