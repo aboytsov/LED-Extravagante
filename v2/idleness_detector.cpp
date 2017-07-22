@@ -3,7 +3,7 @@
 #include <Audio.h>
 
 void IdlenessDetector::OnRmsAvailable(float rms) {
-  if (rms > 0.07) {
+  if (rms > 0.10) {
     last_idle_time_millis_ = millis();
   }
 }
