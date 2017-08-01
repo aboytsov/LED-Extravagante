@@ -28,7 +28,7 @@ void IdleAnimation::OnIdle() {
     reversal_timer_.setPeriod(ReversalDelayMillis());
     reversal_timer_.reset();
     reverse_speed_adjusting_timer_.setPeriod(reverse_speed_adjusting_delay_ms_);
-    hue_ = 0;
+    hue_ = 42;
     lead_offset_ = 0;
     direction_ = 1;
     slowing_ = false;

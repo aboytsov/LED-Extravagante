@@ -24,11 +24,12 @@ class TimingDisplay {
   ILI9341_t3* display_;
   bool enabled_;
 
-  unsigned int displayed_level_[kWidth];
-  unsigned int level_[kWidth];
+  bool showing_both_;
+  unsigned int displayed_level_[2][kWidth];
+  unsigned int level_[2][kWidth];
   int pos_;
-  int start_bin_;
-  int end_bin_;
+  int start_bin_[2];
+  int end_bin_[2];
   bool frozen_;
 };
 
