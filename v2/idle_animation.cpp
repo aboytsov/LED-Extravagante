@@ -7,18 +7,26 @@
 IdleAnimation::IdleAnimation(CRGB* strip, int num_leds)
   : strip_(strip), num_leds_(num_leds), idle_(false),
     speed_up_(1.0),
-    fading_factor_(246),
+    fading_factor_(250),
     pixels_per_sec_(1.0),
     hue_rotation_secs_(120),
     reversal_freq_secs_(450),
     secs_to_reverse_(150),
-    reverse_speed_adjusting_delay_ms_(30) {}
+    reverse_speed_adjusting_delay_ms_(30),
+    pixel_hue_(new float[num_leds]),
+    pixel_value_(new float[num_leds]) {}
+
+IdleAnimation::~IdleAnimation() {
+  delete[] pixel_hue_;
+  delete[] pixel_value_;
+}
  
 void IdleAnimation::OnIdle() {
   if (!idle_) {
     idle_ = true;
     for (int i = 0; i < num_leds_; ++i) {
-      led(i) = CRGB(0, 0, 0);
+      pixel_hue_[i] = 0;
+      pixel_value_[i] = 0;
     }
     speed_adjustment_factor_ = 1.0;
     fade_timer_.setPeriod(FadeDelayMillis());
@@ -36,7 +44,7 @@ void IdleAnimation::OnIdle() {
   }
   if (fade_timer_) {
     for (int i = 0; i < num_leds_; ++i) {
-      led(i).nscale8(fading_factor_);
+      pixel_value_[i] = fading_factor_ * pixel_value_[i] / 256;
     }
   }
   if (move_timer_) {
@@ -46,9 +54,15 @@ void IdleAnimation::OnIdle() {
     }
     lead_offset_ = (lead_offset_ + direction_ + WIDTH) % WIDTH;
     for (int i = lead_offset_; i < num_leds_; i += WIDTH) {
-      led(i) = CHSV(hue_, 255, 255);
+      pixel_hue_[i] = hue_;
+      pixel_value_[i] = 255;
     }
   }
+
+  for (int i = 0; i < num_leds_; ++i) {
+    led(i) = CHSV(pixel_hue_[i], 255, pixel_value_[i]);
+  }
+  
   if (!(slowing_ || speeding_up_) && reversal_timer_) {
     slowing_ = true;
     reverse_speed_adjusting_timer_.reset();

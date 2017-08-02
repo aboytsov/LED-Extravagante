@@ -148,16 +148,18 @@ void loop() {
     }
   }
 
+  for (CRGB* strip : mid_strips) {
+    for (int i = 0; i < NUM_LEDS; ++i) {
+      strip[i] = CHSV(42, 255, 255 * (min_brightness + mid_smoothed * (1 - min_brightness)));
+    }
+  }
+
+  // Idle animation overrides one of the strips if enabled.
   if (idleness_detector.SecondsIdle() >= 60) {
     Profile p("IdleAnimationOnIdle");
     idle_animation.OnIdle();
   } else {
     idle_animation.OnNotIdle();
-    for (CRGB* strip : mid_strips) {
-      for (int i = 0; i < NUM_LEDS; ++i) {
-        strip[i] = CHSV(42, 255, 255 * (min_brightness + mid_smoothed * (1 - min_brightness)));
-      }
-    }
   }
 
   {

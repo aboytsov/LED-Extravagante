@@ -6,6 +6,7 @@
 class IdleAnimation {
  public:
   IdleAnimation(CRGB* strip, int num_leds);
+  ~IdleAnimation();
 
   void OnIdle();
   void OnNotIdle();
@@ -33,6 +34,8 @@ class IdleAnimation {
   CEveryNMillis move_timer_;
   CEveryNMillis reversal_timer_;
   CEveryNMillis reverse_speed_adjusting_timer_;
+  float* pixel_hue_;
+  float* pixel_value_;
   float hue_;
   int lead_offset_;
   int direction_;
