@@ -32,14 +32,13 @@ TimingDisplay timing_display(&normalized_fft, &display);
 FftDistributionDisplay fft_distribution_display(&normalized_fft, &display);
 
 // LEDs.
-#define NUM_LEDS 150
+#define NUM_LEDS 225
 #define NUM_STRIPS 8
 CRGB leds[NUM_LEDS * NUM_STRIPS];
-CRGB* strips[] = {leds, leds + 1 * NUM_LEDS, leds + 2 * NUM_LEDS, leds + 3 * NUM_LEDS, leds + 4 * NUM_LEDS, leds + 5 * NUM_LEDS};
-IdleAnimation idle_animation(strips[2], NUM_LEDS);
-CRGB* bass1_strips[] = {strips[0]};
-CRGB* bass2_strips[] = {strips[1]};
-CRGB* mid_strips[] = {strips[2]};
+CRGB* strips[] = {leds, leds + 1 * NUM_LEDS, leds + 2 * NUM_LEDS, leds + 4 * NUM_LEDS, leds + 5 * NUM_LEDS, leds + 6 * NUM_LEDS};
+IdleAnimation idle_animation(strips[5], NUM_LEDS);
+CRGB* bass1_strips[] = {strips[0], strips[1], strips[2], strips[3], strips[4]};
+CRGB* bass2_strips[] = {strips[5]};
 
 void setup() {
   // EnableProfiling();
@@ -75,7 +74,6 @@ void loop() {
 
   static float bass1 = 0;
   static float bass2 = 0;
-  static float mid = 0;
   if (normalized_fft.available()) {
     // FFT is available every 12ms or so. It takes ~700ms to compute the FFT.
     // Note that the FFT computation is done in an interrupt, so it could occur
@@ -95,7 +93,7 @@ void loop() {
     }
     debug_display.UpdateBand1(bass1);
 
-    bass2 = (normalized_fft.read(4, 7) - 0.1) / 0.3;
+    bass2 = (normalized_fft.read(4, 7) - 0.1) / 0.25;
     bass2 = max(0.0, bass2);
     bass2 = min(1.0, bass2);
     if (bass2 <= 0.5) {
@@ -104,53 +102,36 @@ void loop() {
       bass2 = (bass2 - 0.5) / (1 - 0.5) * (1 - 0.7) + 0.7;
     }
     debug_display.UpdateBand2(bass2);
+  }
 
-    mid = (normalized_fft.read(10, 27) - 0.1) / 0.8;
-    mid = max(0.0, mid);
-    mid = min(1.0, mid);
-    if (mid <= 0.1875) {
-      mid = mid / 0.1875 * 0.5;
-    } else {
-      mid = (mid - 0.1875) / (1 - 0.1875) * (1 - 0.5) + 0.5;
+  {
+    Profile p("ComputeLEDs");
+    static const float kWithSoundMinBrightness = 0.2;
+    static const float kIdleBrightness = 0.6;
+    float min_brightness = min(idleness_detector.SecondsIdle() / 60, 1) * (kIdleBrightness - kWithSoundMinBrightness) + kWithSoundMinBrightness;
+
+    static float bass1_smoothed = 0;
+    static float bass2_smoothed = 0;
+    bass1_smoothed = max(bass1_smoothed, bass1);
+    bass2_smoothed = max(bass2_smoothed, bass2);
+
+    static const float kBass1Decay = 0.83;
+    static const float kBass2Decay = 0.75;
+    EVERY_N_MILLISECONDS(25) {
+      bass1_smoothed *= kBass1Decay;
+      bass2_smoothed *= kBass2Decay;
     }
-    debug_display.UpdateBand3(mid);
-  }
 
-  static const float kWithSoundMinBrightness = 0.2;
-  static const float kIdleBrightness = 0.5;
-  float min_brightness = min(idleness_detector.SecondsIdle() / 60, 1) * (kIdleBrightness - kWithSoundMinBrightness) + kWithSoundMinBrightness;
-
-  static float bass1_smoothed = 0;
-  static float bass2_smoothed = 0;
-  static float mid_smoothed = 0;
-  bass1_smoothed = max(bass1_smoothed, bass1);
-  bass2_smoothed = max(bass2_smoothed, bass2);
-  mid_smoothed = max(mid_smoothed, mid);
-
-  static const float kBass1Decay = 0.88;
-  static const float kBass2Decay = 0.91;
-  static const float kMidDecay = 0.75;
-  EVERY_N_MILLISECONDS(25) {
-    bass1_smoothed *= kBass1Decay;
-    bass2_smoothed *= kBass2Decay;
-    mid_smoothed *= kMidDecay;
-  }
-
-  for (CRGB* strip : bass1_strips) {
-    for (int i = 0; i < NUM_LEDS; ++i) {
-      strip[i] = CHSV(180, 204, 255 * (min_brightness + bass1_smoothed * (1 - min_brightness)));
+    for (CRGB* strip : bass1_strips) {
+      for (int i = 0; i < NUM_LEDS; ++i) {
+        strip[i] = CHSV(160, 255, 255 * (min_brightness + bass1_smoothed * (1 - min_brightness)));
+      }
     }
-  }
 
-  for (CRGB* strip : bass2_strips) {
-    for (int i = 0; i < NUM_LEDS; ++i) {
-      strip[i] = CHSV(247, 170, 255 * (min_brightness + bass2_smoothed * (1 - min_brightness)));
-    }
-  }
-
-  for (CRGB* strip : mid_strips) {
-    for (int i = 0; i < NUM_LEDS; ++i) {
-      strip[i] = CHSV(42, 255, 255 * (min_brightness + mid_smoothed * (1 - min_brightness)));
+    for (CRGB* strip : bass2_strips) {
+      for (int i = 0; i < NUM_LEDS; ++i) {
+        strip[i] = CHSV(250, 255, 255 * (min_brightness + bass2_smoothed * (1 - min_brightness)));
+      }
     }
   }
 
