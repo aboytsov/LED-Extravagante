@@ -1,0 +1,3 @@
+Display: 9, 10, 11, 12, 13, GND, 3.3V, Vin (5V)
+Audio In: 17, AGND, 3.3V
+OctoWS2811: 2, 5, 6, 7, 8, 14, 20, 21, misc 15, 16
