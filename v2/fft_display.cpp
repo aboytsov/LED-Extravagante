@@ -5,7 +5,7 @@
 FftDisplay::FftDisplay(NormalizedFft* fft, BandDisplay* band_display, int x, int y, int width, int height, int bins, int color)
   : fft_(fft), band_display_(band_display), bins_(bins), focus_mode_(false), band_ids_(new int[bins_]) {
   for (int i = 0; i < bins_; ++i) {
-    band_ids_[i] = band_display->AddBand(x + i * width / bins, y, width / bins, height, color, /*decaying=*/true);
+    band_ids_[i] = band_display->AddBand(x + i * width / bins, y, width / bins, height, color, /*decaying=*/true, /*decay=*/0.03);
   }
 }
 

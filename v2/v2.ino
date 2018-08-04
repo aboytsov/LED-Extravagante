@@ -11,6 +11,7 @@
 #include "idleness_detector.h"
 #include "normalized_fft.h"
 #include "profiler.h"
+#include "simple_display.h"
 #include "timing_display.h"
 #include "utils.h"
 
@@ -27,12 +28,13 @@ NormalizedFft normalized_fft(&fft);
 
 // Display.
 ILI9341_t3 display = ILI9341_t3(10, 9);
+SimpleDisplay simple_display(&normalized_fft, &display);
 DebugDisplay debug_display(&normalized_fft, &display);
 TimingDisplay timing_display(&normalized_fft, &display);
 FftDistributionDisplay fft_distribution_display(&normalized_fft, &display);
 
 // LEDs.
-#define NUM_LEDS 225
+#define NUM_LEDS 220
 #define NUM_STRIPS 8
 CRGB leds[NUM_LEDS * NUM_STRIPS];
 CRGB* strips[] = {leds, leds + 1 * NUM_LEDS, leds + 2 * NUM_LEDS, leds + 4 * NUM_LEDS, leds + 5 * NUM_LEDS, leds + 6 * NUM_LEDS};
@@ -50,7 +52,7 @@ void setup() {
   display.begin();
   display.setRotation(1);
   
-  debug_display.set_enabled(true);
+  simple_display.set_enabled(true);
 
   FastLED.addLeds<OCTOWS2811>(leds, NUM_LEDS);
   FastLED.show();
@@ -63,6 +65,7 @@ void loop() {
     float rms_value = rms.read();
     idleness_detector.OnRmsAvailable(rms_value);
     normalized_fft.OnRmsAvailable(rms_value);
+    simple_display.OnRmsAvailable(rms_value);
     debug_display.OnRmsAvailable(rms_value);
   }
 
@@ -79,6 +82,7 @@ void loop() {
     // Note that the FFT computation is done in an interrupt, so it could occur
     // at any time during the execution of loop().
     Profile p("OnFftAvailable");
+    simple_display.OnFftAvailable();
     debug_display.OnFftAvailable();
     timing_display.OnFftAvailable();
     fft_distribution_display.OnFftAvailable();
@@ -150,6 +154,7 @@ void loop() {
 
   {
     Profile p("DebugDisplayLoop");
+    simple_display.Loop();
     debug_display.Loop();
   }
 
@@ -162,7 +167,10 @@ void loop() {
     fft_distribution_display.DoCommands();  // Prefix f.
     idle_animation.DoCommands();  // Prefix i.
     if (CheckSerial('s')) {
-      if (debug_display.enabled()) {
+      if (simple_display.enabled()) {
+        simple_display.set_enabled(false);
+        debug_display.set_enabled(true);
+      } else if (debug_display.enabled()) {
         debug_display.set_enabled(false);
         timing_display.set_enabled(true);
       } else if (timing_display.enabled()) {

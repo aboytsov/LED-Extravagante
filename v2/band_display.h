@@ -7,7 +7,7 @@ class BandDisplay {
  public:
   BandDisplay(ILI9341_t3* display);
 
-  int AddBand(int x, int y, int width, int height, int color, bool decaying);
+  int AddBand(int x, int y, int width, int height, int color, bool decaying, float decay);
 
   // level is from 0 to 1.
   void UpdateBand(int id, float level);
@@ -22,6 +22,7 @@ class BandDisplay {
     int height;
     int color;
     bool decaying;
+    float decay;
     float current_level;
     float displayed_level;
   };

@@ -4,7 +4,7 @@
 
 BandDisplay::BandDisplay(ILI9341_t3* display) : display_(display), num_bands_(0), bands_(new Band[0]) {}
 
-int BandDisplay::AddBand(int x, int y, int width, int height, int color, bool decaying) {
+int BandDisplay::AddBand(int x, int y, int width, int height, int color, bool decaying, float decay) {
   int id = num_bands_;
 
   Band* new_bands = new Band[num_bands_ + 1];
@@ -20,6 +20,7 @@ int BandDisplay::AddBand(int x, int y, int width, int height, int color, bool de
   band.height = height;
   band.color = color;
   band.decaying = decaying;
+  band.decay = decay;
   band.current_level = 0;
   band.displayed_level = 1;  // Will force draw.
 
@@ -40,7 +41,7 @@ void BandDisplay::Loop() {
     for (int i = 0; i < num_bands_; ++i) {
       Band& band = bands_[i];
       if (band.decaying) {
-        band.current_level = max(band.current_level - 0.03, 0.0);
+        band.current_level = max(band.current_level - band.decay, 0.0);
       }
     }
   }

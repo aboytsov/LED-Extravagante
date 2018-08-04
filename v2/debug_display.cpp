@@ -11,13 +11,13 @@ DebugDisplay::DebugDisplay(NormalizedFft* fft, ILI9341_t3* display)
   : fft_(fft), display_(display), enabled_(false),
     band_display_(display),
     fft_display_(fft, &band_display_, /*x=*/160, /*y=*/TEXT_HEIGHT, /*width=*/160, /*height=*/HEIGHT - TEXT_HEIGHT, /*bins=*/32, ILI9341_GREEN),
-    peak_band_id_(band_display_.AddBand(0, TEXT_HEIGHT, BAND_WIDTH - 1, 220, ILI9341_RED, /*decaying=*/true)),
-    rms_band_id_(band_display_.AddBand(BAND_WIDTH, TEXT_HEIGHT, BAND_WIDTH / 2 - 1, 220, ILI9341_RED, /*decaying=*/true)),
-    normalized_rms_band_id_(band_display_.AddBand(BAND_WIDTH + BAND_WIDTH / 2, TEXT_HEIGHT, BAND_WIDTH / 2 - 1, 220, ILI9341_RED, /*decaying=*/false)),
-    band_1_id_(band_display_.AddBand(2 * BAND_WIDTH + 1, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false)),
-    band_2_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 24, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false)),
-    band_3_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 48, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false)),
-    band_4_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 72, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false)) {
+    peak_band_id_(band_display_.AddBand(0, TEXT_HEIGHT, BAND_WIDTH - 1, 220, ILI9341_RED, /*decaying=*/true, /*decay=*/0.03)),
+    rms_band_id_(band_display_.AddBand(BAND_WIDTH, TEXT_HEIGHT, BAND_WIDTH / 2 - 1, 220, ILI9341_RED, /*decaying=*/true, /*decay=*/0.03)),
+    normalized_rms_band_id_(band_display_.AddBand(BAND_WIDTH + BAND_WIDTH / 2, TEXT_HEIGHT, BAND_WIDTH / 2 - 1, 220, ILI9341_RED, /*decaying=*/false, /*decay=*/0)),
+    band_1_id_(band_display_.AddBand(2 * BAND_WIDTH + 1, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false, /*decay=*/0)),
+    band_2_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 24, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false, /*decay=*/0)),
+    band_3_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 48, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_BLUE, /*decaying=*/false, /*decay=*/0)),
+    band_4_id_(band_display_.AddBand(2 * BAND_WIDTH + 1 + 72, TEXT_HEIGHT, 24, HEIGHT - TEXT_HEIGHT, ILI9341_GREEN, /*decaying=*/false, /*decay=*/0)) {
 }
 
 bool DebugDisplay::enabled() {
